@@ -6,7 +6,11 @@ const { validateParams, validateQuery } = require('../../middlewares/validation.
 
 const router = express.Router();
 
-// All routes require authentication and admin role
+
+// Admin registration (public)
+router.post('/register', adminController.adminRegister);
+
+// All routes below require authentication and admin role
 router.use(authenticate);
 router.use(authorize(['admin']));
 

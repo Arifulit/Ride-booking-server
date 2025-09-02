@@ -451,3 +451,31 @@ class AdminController {
 }
 
 module.exports = AdminController;
+/**
+ * Admin Registration
+ */
+AdminController.adminRegister = async (req, res) => {
+  try {
+    const { firstName, lastName, email, password, phone } = req.body;
+    // Check if email already exists
+    const existing = await User.findOne({ email });
+    if (existing) {
+      return ResponseUtils.error(res, 'Email already registered', 409);
+    }
+    // Create admin user
+    const admin = new User({
+      firstName,
+      lastName,
+      email,
+      password,
+      phone,
+      role: 'admin'
+    });
+    await admin.save();
+    const publicProfile = admin.getPublicProfile();
+    ResponseUtils.success(res, publicProfile, 'Admin registered successfully', 201);
+  } catch (error) {
+    console.error('Admin registration error:', error);
+    ResponseUtils.error(res, 'Failed to register admin', 500);
+  }
+};

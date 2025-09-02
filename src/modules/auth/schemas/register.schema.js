@@ -51,10 +51,10 @@ const registerSchema = Joi.object({
     }),
   
   role: Joi.string()
-    .valid('rider', 'driver')
+    .valid('rider', 'driver', 'admin')
     .default('rider')
     .messages({
-      'any.only': 'Role must be either rider or driver'
+      'any.only': 'Role must be either rider, driver or admin'
     }),
 
   // Driver-specific fields (required only if role is driver)

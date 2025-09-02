@@ -34,6 +34,8 @@ app.get("/", (req, res) => {
 });
 
 app.use('/api', limiter);
+// const userRoutes = require('./modules/user/user.routes');
+// app.use('/api/v1/users', userRoutes);
 
 // Logging
 if (process.env.NODE_ENV === 'development') {
