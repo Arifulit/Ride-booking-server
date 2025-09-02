@@ -98,6 +98,33 @@ class RideController {
     }
   }
 
+ 
+static async rejectRide(req, res) {
+  try {
+    const { rideId } = req.params;
+    const driverId = req.user._id;
+
+    // শুধু requested/accepted ride-ই reject করা যাবে
+    const ride = await Ride.findOne({ _id: rideId, status: { $in: ['requested', 'accepted'] } });
+    if (!ride) {
+      return ResponseUtils.error(res, 'Ride not found or already processed', 404);
+    }
+
+    // ড্রাইভার accept করে থাকলে, শুধু সেই ড্রাইভারই reject করতে পারবে
+    if (ride.driverId && ride.driverId.toString() !== driverId.toString()) {
+      return ResponseUtils.error(res, 'Not authorized to reject this ride', 403);
+    }
+
+    ride.status = 'rejected';
+    await ride.save();
+
+    ResponseUtils.success(res, { ride }, 'Ride rejected successfully');
+  } catch (error) {
+    console.error('Reject ride error:', error);
+    ResponseUtils.error(res, error.message || 'Failed to reject ride', 500);
+  }
+};
+
   /**
    * Update ride status (Driver)
    */

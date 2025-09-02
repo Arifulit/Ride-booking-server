@@ -19,6 +19,7 @@ router.patch('/:rideId/rate', authorize(['rider']), rideController.rateDriver);
 
 // Ride management (Drivers)
 router.patch('/:rideId/accept', requireApprovedDriver, rideController.acceptRide);
+router.patch('/:rideId/reject', requireApprovedDriver, rideController.rejectRide);
 router.patch('/:rideId/status', authorize(['driver']), rideController.updateRideStatus);
 
 // Shared routes
