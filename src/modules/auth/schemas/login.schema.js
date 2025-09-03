@@ -1,20 +1,8 @@
-const Joi = require('joi');
+const { z } = require('zod');
 
-const loginSchema = Joi.object({
-  email: Joi.string()
-    .email()
-    .lowercase()
-    .required()
-    .messages({
-      'string.email': 'Please enter a valid email address',
-      'any.required': 'Email is required'
-    }),
-  
-  password: Joi.string()
-    .required()
-    .messages({
-      'any.required': 'Password is required'
-    })
+const loginSchema = z.object({
+  email: z.string().email({ message: 'Please enter a valid email address' }).toLowerCase(),
+  password: z.string({ required_error: 'Password is required' })
 });
 
 module.exports = loginSchema;
