@@ -15,7 +15,6 @@ const authorize = (allowedRoles) => {
       if (!allowedRoles.includes(req.user.role)) {
         return ResponseUtils.error(res, 'Insufficient permissions', 403);
       }
-
       next();
     } catch (error) {
       console.error('Authorization middleware error:', error);

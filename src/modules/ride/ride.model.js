@@ -1,3 +1,31 @@
+  // feedback: {
+  //   riderComment: { type: String, default: null, trim: true, maxlength: 500 },
+  //   driverComment: { type: String, default: null, trim: true, maxlength: 500 }
+  // },
+// --- Ride Lifecycle & Status ---
+// Statuses: requested → accepted → picked_up → in_transit → completed
+// cancelled/rejected status supported
+// Only rider can cancel when status is 'requested' or 'accepted'
+// Only driver can update to accepted, picked_up, in_transit, completed
+// Admin can change any status (if implemented in controller)
+// Each status change is timestamped in timeline
+
+// --- Business Rules ---
+// Suspended driver cannot accept rides (enforced in middleware)
+// Driver cannot accept if already on a ride (checked in controller)
+// Rider cannot have multiple active rides (checked in controller)
+// Max cancel attempts not implemented (can be added)
+
+// --- Access & Visibility ---
+// Rider: can view all own rides
+// Driver: can view own completed/pending rides
+// Admin: can view all rides, block users, change status (if controller allows)
+
+// --- Role-based Control ---
+// Rider-only endpoints: request, cancel, history
+// Driver-only endpoints: accept, update status, history
+// Admin-only endpoints: user/driver management, reports, all rides
+// All protected by JWT + authorize(['role']) middleware
 const mongoose = require('mongoose');
 
 const rideSchema = new mongoose.Schema({
@@ -54,7 +82,7 @@ const rideSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['requested', 'accepted', 'picked_up', 'in_transit', 'completed', 'cancelled', 'rejected'],
+    enum: ['requested', 'accepted', 'picked_up', 'in_transit', 'completed', 'cancelled', 'rejected','waitlist'],
     default: 'requested'
   },
   fare: {
@@ -143,6 +171,10 @@ const rideSchema = new mongoose.Schema({
       max: 5,
       default: null
     }
+  },
+  feedback: {
+    riderComment: { type: String, default: null, trim: true, maxlength: 500 },
+    driverComment: { type: String, default: null, trim: true, maxlength: 500 }
   }
 }, {
   timestamps: true,

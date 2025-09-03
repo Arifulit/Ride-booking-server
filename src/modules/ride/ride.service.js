@@ -81,7 +81,7 @@ class RideService {
    * @returns {Array} - Array of nearby drivers
    */
   static async findNearbyDrivers(longitude, latitude, radius = 10) {
-    const Driver = require('./driver.model');
+    const Driver = require('../driver/driver.model');
     
     return await Driver.find({
       approvalStatus: 'approved',

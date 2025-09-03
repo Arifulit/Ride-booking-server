@@ -5,6 +5,92 @@ const ResponseUtils = require('../../utils/response');
 
 class RideController {
   /**
+   * Get all rides with full history (Admin)
+   */
+  static async getAllRidesHistory(req, res) {
+    try {
+      const rides = await Ride.find().sort({ createdAt: -1 });
+      res.json({ success: true, rides });
+    } catch (err) {
+      res.status(500).json({ success: false, message: 'Failed to fetch all rides history' });
+    }
+  }
+  /**
+   * কাছাকাছি ড্রাইভার সার্চ (Geo-based)
+   * POST /api/v1/rides/search-drivers
+   * Body: { longitude, latitude, radius }
+   * Response: available drivers
+   */
+  static async searchNearbyDrivers(req, res) {
+    try {
+      const { longitude, latitude, radius = 10 } = req.body;
+      if (typeof longitude !== 'number' || typeof latitude !== 'number') {
+        return res.status(400).json({ success: false, message: 'longitude ও latitude লাগবে' });
+      }
+      const drivers = await require('./ride.service').findNearbyDrivers(longitude, latitude, radius);
+      res.json({ success: true, drivers });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message || 'Failed to search drivers' });
+    }
+  }
+  /**
+   * Admin dashboard analytics
+   * GET /api/v1/rides/admin/analytics
+   * Only admin can access
+   */
+  static async getAdminAnalytics(req, res) {
+    try {
+      const Ride = require('./ride.model');
+      const User = require('../user/user.model');
+      const Driver = require('../driver/driver.model');
+
+      const [totalRides, completedRides, cancelledRides, activeRides, totalEarnings, totalUsers, totalDrivers] = await Promise.all([
+        Ride.countDocuments(),
+        Ride.countDocuments({ status: 'completed' }),
+        Ride.countDocuments({ status: 'cancelled' }),
+        Ride.countDocuments({ status: { $in: ['requested', 'accepted', 'picked_up', 'in_transit'] } }),
+        Ride.aggregate([{ $match: { status: 'completed' } }, { $group: { _id: null, total: { $sum: '$fare.actual' } } }]),
+        User.countDocuments(),
+        Driver.countDocuments()
+      ]);
+
+      res.json({
+        success: true,
+        data: {
+          totalRides,
+          completedRides,
+          cancelledRides,
+          activeRides,
+          totalEarnings: totalEarnings[0]?.total || 0,
+          totalUsers,
+          totalDrivers
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, message: 'Failed to fetch analytics' });
+    }
+  }
+  /**
+   * রাইড fare estimation API
+   * POST /api/v1/rides/estimate
+   * Body: { pickupLocation, destination, rideType }
+   * Response: { estimated fare, distance, duration }
+   */
+  static async estimateFare(req, res) {
+    try {
+      const { pickupLocation, destination, rideType = 'economy' } = req.body;
+      if (!pickupLocation || !destination) {
+        return ResponseUtils.error(res, 'pickupLocation ও destination লাগবে', 400);
+      }
+      // Estimate calculate
+      const estimates = require('./ride.service').calculateEstimates(pickupLocation, destination, rideType);
+      ResponseUtils.success(res, estimates, 'Estimated fare calculated');
+    } catch (error) {
+      console.error('Estimate fare error:', error);
+      ResponseUtils.error(res, 'Failed to estimate fare', 500);
+    }
+  }
+  /**
    * Request a new ride (Rider)
    */
   static async requestRide(req, res) {
@@ -28,10 +114,11 @@ class RideController {
         return ResponseUtils.error(res, 'You already have an active ride', 409);
       }
 
+
       // Calculate estimated fare and duration
       const estimates = rideService.calculateEstimates(pickupLocation, destination, rideType);
 
-      // Create ride
+      // Create ride with default status 'requested'
       const ride = new Ride({
         riderId,
         pickupLocation,
@@ -42,6 +129,7 @@ class RideController {
         fare: { estimated: estimates.fare },
         distance: { estimated: estimates.distance },
         duration: { estimated: estimates.duration }
+        // status: 'requested' // দিতে হবে না, default-ই হবে
       });
 
       await ride.save();
@@ -126,52 +214,58 @@ static async rejectRide(req, res) {
 };
 
   /**
-   * Update ride status (Driver)
+   * Update ride status (Driver or Admin)
+   * Driver: can update only their own rides, and only valid transitions
+   * Admin: can update any ride to any status (forcibly)
    */
   static async updateRideStatus(req, res) {
     try {
       const { rideId } = req.params;
       const { status } = req.body;
-      const driverId = req.user._id;
+      const userId = req.user._id;
+      const userRole = req.user.role;
 
-      const validStatuses = ['picked_up', 'in_transit', 'completed'];
+      const validStatuses = ['picked_up', 'in_transit', 'completed', 'cancelled'];
       if (!validStatuses.includes(status)) {
         return ResponseUtils.error(res, 'Invalid status', 400);
       }
 
-      const ride = await Ride.findOne({ 
-        _id: rideId, 
-        driverId,
-        status: { $ne: 'completed' }
-      });
-
-      if (!ride) {
-        return ResponseUtils.error(res, 'Ride not found or not authorized', 404);
+      // Admin can update any ride
+      let ride;
+      if (userRole === 'admin') {
+        ride = await Ride.findOne({ _id: rideId });
+        if (!ride) {
+          return ResponseUtils.error(res, 'Ride not found', 404);
+        }
+      } else if (userRole === 'driver') {
+        ride = await Ride.findOne({ _id: rideId, driverId: userId, status: { $ne: 'completed' } });
+        if (!ride) {
+          return ResponseUtils.error(res, 'Ride not found or not authorized', 404);
+        }
+        // Validate status transition for driver
+        const validTransitions = {
+          'accepted': ['picked_up'],
+          'picked_up': ['in_transit'],
+          'in_transit': ['completed']
+        };
+        if (!validTransitions[ride.status]?.includes(status)) {
+          return ResponseUtils.error(res, `Cannot change status from ${ride.status} to ${status}`, 400);
+        }
+      } else {
+        return ResponseUtils.error(res, 'Insufficient permissions', 403);
       }
 
-      // Validate status transition
-      const validTransitions = {
-        'accepted': ['picked_up'],
-        'picked_up': ['in_transit'],
-        'in_transit': ['completed']
-      };
-
-      if (!validTransitions[ride.status]?.includes(status)) {
-        return ResponseUtils.error(res, `Cannot change status from ${ride.status} to ${status}`, 400);
-      }
-
-      // Update ride status
-      await ride.updateStatus(status);
+      // Update ride status and timeline
+      await ride.updateStatus(status, userRole);
 
       // If completed, update driver earnings
-      if (status === 'completed') {
-        const driver = await Driver.findOne({ userId: driverId });
+      if (status === 'completed' && ride.driverId) {
+        const driver = await Driver.findOne({ userId: ride.driverId });
         if (driver) {
           driver.earnings.total += ride.fare.estimated;
           driver.earnings.thisMonth += ride.fare.estimated;
           await driver.save();
         }
-        
         // Set actual fare (for now, same as estimated)
         ride.fare.actual = ride.fare.estimated;
         ride.distance.actual = ride.distance.estimated;
@@ -194,37 +288,74 @@ static async rejectRide(req, res) {
   }
 
   /**
-   * Get pending rides for driver
+   * Admin: forcibly update any ride status (for admin panel)
    */
-  static async getPendingRides(req, res) {
+  static async requestRide(req, res) {
     try {
-      const { page = 1, limit = 10 } = req.query;
+      const riderId = req.user._id;
+      const {
+        pickupLocation,
+        destination,
+        rideType = 'economy',
+        paymentMethod = 'cash',
+        notes
+      } = req.body;
 
-      const rides = await Ride.find({ 
-        status: 'requested',
-        driverId: null 
-      })
-      .populate('riderId', 'firstName lastName phone')
-      .sort({ createdAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
-
-      const total = await Ride.countDocuments({ 
-        status: 'requested',
-        driverId: null 
+      // Check if rider has any active rides
+      const activeRide = await Ride.findOne({
+        riderId,
+        status: { $in: ['requested', 'accepted', 'picked_up', 'in_transit'] }
       });
 
-      ResponseUtils.paginated(res, rides, {
-        currentPage: parseInt(page),
-        totalPages: Math.ceil(total / limit),
-        totalRides: total,
-        hasNext: page * limit < total,
-        hasPrev: page > 1
-      }, 'Pending rides retrieved successfully');
+      if (activeRide) {
+        return ResponseUtils.error(res, 'You already have an active ride', 409);
+      }
+
+      // Calculate estimated fare and duration
+      const estimates = rideService.calculateEstimates(pickupLocation, destination, rideType);
+
+      // Auto-match: geo-based nearest available driver
+      let matchedDriver = null;
+      const nearbyDrivers = await rideService.findNearbyDrivers(
+        pickupLocation.coordinates.coordinates[0],
+        pickupLocation.coordinates.coordinates[1],
+        10 // radius in km
+      );
+      if (nearbyDrivers && nearbyDrivers.length > 0) {
+        matchedDriver = nearbyDrivers[0];
+      }
+
+      // Create ride
+      const ride = new Ride({
+        riderId,
+        pickupLocation,
+        destination,
+        rideType,
+        paymentMethod,
+        notes,
+        fare: { estimated: estimates.fare },
+        distance: { estimated: estimates.distance },
+        duration: { estimated: estimates.duration },
+        // Auto-match হলে driverId, driverProfileId, status 'accepted'
+        ...(matchedDriver ? {
+          driverId: matchedDriver.userId,
+          driverProfileId: matchedDriver._id,
+          status: 'accepted',
+          timeline: { requested: new Date(), accepted: new Date() }
+        } : {})
+      });
+
+      await ride.save();
+      await ride.populate('riderId', 'firstName lastName phone');
+      if (matchedDriver) {
+        await ride.populate('driverProfileId', 'vehicleInfo');
+      }
+
+      ResponseUtils.success(res, { ride, autoMatched: !!matchedDriver }, matchedDriver ? 'Ride auto-matched with driver' : 'Ride requested successfully', 201);
 
     } catch (error) {
-      console.error('Get pending rides error:', error);
-      ResponseUtils.error(res, 'Failed to retrieve pending rides', 500);
+      console.error('Request ride error:', error);
+      ResponseUtils.error(res, error.message || 'Failed to request ride', 500);
     }
   }
 
@@ -368,7 +499,7 @@ static async rejectRide(req, res) {
   static async cancelRide(req, res) {
     try {
       const { rideId } = req.params;
-      const { reason } = req.body;
+      const { reason } = req.body || {};
       const riderId = req.user._id;
 
       const ride = await Ride.findOne({ _id: rideId, riderId });
@@ -397,10 +528,13 @@ static async rejectRide(req, res) {
   static async rateDriver(req, res) {
     try {
       const { rideId } = req.params;
-      const { rating, feedback } = req.body;
+      // riderRating, driverRating, rating সব ফিল্ড নিন
+      const { rating, riderRating, driverRating, feedback, riderComment, driverComment } = req.body;
       const riderId = req.user._id;
 
-      if (rating < 1 || rating > 5) {
+      // যেকোনো একটি rating ফিল্ড valid কিনা চেক করুন
+      const ratingValue = typeof riderRating === 'number' ? riderRating : (typeof driverRating === 'number' ? driverRating : rating);
+      if (ratingValue < 1 || ratingValue > 5) {
         return ResponseUtils.error(res, 'Rating must be between 1 and 5', 400);
       }
 
@@ -414,22 +548,46 @@ static async rejectRide(req, res) {
         return ResponseUtils.error(res, 'Completed ride not found', 404);
       }
 
-      if (ride.rating.driverRating) {
+      // আগেই রেটিং দেওয়া থাকলে ব্লক করুন (driverRating বা riderRating যেটা আসবে)
+      if (ride.rating.driverRating || ride.rating.riderRating) {
         return ResponseUtils.error(res, 'Ride already rated', 409);
       }
 
-      // Update ride rating
-      ride.rating.driverRating = rating;
+      // riderRating থাকলে সেট করুন
+      if (typeof riderRating === 'number') {
+        ride.rating.riderRating = riderRating;
+      }
+      // driverRating থাকলে সেট করুন
+      if (typeof driverRating === 'number') {
+        ride.rating.driverRating = driverRating;
+      }
+      // পুরনো rating ফিল্ড থাকলে সেটাকে driverRating-এ রাখুন
+      if (typeof rating === 'number') {
+        ride.rating.driverRating = rating;
+      }
+
       if (feedback) ride.notes = feedback;
+      if (riderComment) {
+        ride.feedback = ride.feedback || {};
+        ride.feedback.riderComment = riderComment;
+      }
+      if (driverComment) {
+        ride.feedback = ride.feedback || {};
+        ride.feedback.driverComment = driverComment;
+      }
       await ride.save();
 
-      // Update driver's overall rating
+      // ড্রাইভারের মোট রেটিং আপডেট করুন (NaN সমস্যা প্রতিরোধ)
       const driver = await Driver.findById(ride.driverProfileId);
       if (driver) {
-        const newCount = driver.rating.count + 1;
-        const newAverage = ((driver.rating.average * driver.rating.count) + rating) / newCount;
-        
-        driver.rating.average = Math.round(newAverage * 10) / 10; // Round to 1 decimal
+        // আগের রেটিং ও কাউন্ট NaN বা undefined হলে ০ ধরুন
+        const prevCount = typeof driver.rating.count === 'number' ? driver.rating.count : 0;
+        const prevAverage = typeof driver.rating.average === 'number' ? driver.rating.average : 0;
+        const newCount = prevCount + 1;
+        let newAverage = ((prevAverage * prevCount) + ratingValue) / newCount;
+        // যদি NaN হয়, তাহলে ০ সেট করুন
+        if (isNaN(newAverage)) newAverage = 0;
+        driver.rating.average = Math.round(newAverage * 10) / 10; // ১ দশমিক ঘরে রাউন্ড করুন
         driver.rating.count = newCount;
         await driver.save();
       }
