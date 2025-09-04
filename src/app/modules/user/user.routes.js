@@ -15,4 +15,5 @@ router.patch('/profile', userController.updateProfile);
 // Rider-specific routes
 router.get('/rides/history', authorize(['rider']), userController.getRideHistory);
 router.get('/', authorize(['admin']), userController.getAllUsers);
+
 module.exports = router;

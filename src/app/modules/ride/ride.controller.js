@@ -16,7 +16,7 @@ class RideController {
     }
   }
   /**
-   * কাছাকাছি ড্রাইভার সার্চ (Geo-based)
+   * Search nearby drivers (Geo-based search)
    * POST /api/v1/rides/search-drivers
    * Body: { longitude, latitude, radius }
    * Response: available drivers
@@ -71,7 +71,7 @@ class RideController {
     }
   }
   /**
-   * রাইড fare estimation API
+   * Ride fare estimation API
    * POST /api/v1/rides/estimate
    * Body: { pickupLocation, destination, rideType }
    * Response: { estimated fare, distance, duration }
@@ -129,7 +129,7 @@ class RideController {
         fare: { estimated: estimates.fare },
         distance: { estimated: estimates.distance },
         duration: { estimated: estimates.duration }
-        // status: 'requested' // দিতে হবে না, default-ই হবে
+        // status: 'requested' //  default
       });
 
       await ride.save();
@@ -192,13 +192,14 @@ static async rejectRide(req, res) {
     const { rideId } = req.params;
     const driverId = req.user._id;
 
-    // শুধু requested/accepted ride-ই reject করা যাবে
+        // Only rides in "requested" or "accepted" status can be rejected
     const ride = await Ride.findOne({ _id: rideId, status: { $in: ['requested', 'accepted'] } });
     if (!ride) {
       return ResponseUtils.error(res, 'Ride not found or already processed', 404);
     }
 
-    // ড্রাইভার accept করে থাকলে, শুধু সেই ড্রাইভারই reject করতে পারবে
+
+     // Only the driver assigned to the ride can reject it
     if (ride.driverId && ride.driverId.toString() !== driverId.toString()) {
       return ResponseUtils.error(res, 'Not authorized to reject this ride', 403);
     }
@@ -336,7 +337,7 @@ static async rejectRide(req, res) {
         fare: { estimated: estimates.fare },
         distance: { estimated: estimates.distance },
         duration: { estimated: estimates.duration },
-        // Auto-match হলে driverId, driverProfileId, status 'accepted'
+        // Auto-match driverId, driverProfileId, status 'accepted'
         ...(matchedDriver ? {
           driverId: matchedDriver.userId,
           driverProfileId: matchedDriver._id,
@@ -528,11 +529,11 @@ static async rejectRide(req, res) {
   static async rateDriver(req, res) {
     try {
       const { rideId } = req.params;
-      // riderRating, driverRating, rating সব ফিল্ড নিন
+      // riderRating, driverRating, rating 
       const { rating, riderRating, driverRating, feedback, riderComment, driverComment } = req.body;
       const riderId = req.user._id;
 
-      // যেকোনো একটি rating ফিল্ড valid কিনা চেক করুন
+      // Determine the effective rating value
       const ratingValue = typeof riderRating === 'number' ? riderRating : (typeof driverRating === 'number' ? driverRating : rating);
       if (ratingValue < 1 || ratingValue > 5) {
         return ResponseUtils.error(res, 'Rating must be between 1 and 5', 400);
@@ -548,20 +549,20 @@ static async rejectRide(req, res) {
         return ResponseUtils.error(res, 'Completed ride not found', 404);
       }
 
-      // আগেই রেটিং দেওয়া থাকলে ব্লক করুন (driverRating বা riderRating যেটা আসবে)
+      // Check if already rated
       if (ride.rating.driverRating || ride.rating.riderRating) {
         return ResponseUtils.error(res, 'Ride already rated', 409);
       }
 
-      // riderRating থাকলে সেট করুন
+      // Set riderRating if available
       if (typeof riderRating === 'number') {
         ride.rating.riderRating = riderRating;
       }
-      // driverRating থাকলে সেট করুন
+      // Set driverRating if available
       if (typeof driverRating === 'number') {
         ride.rating.driverRating = driverRating;
       }
-      // পুরনো rating ফিল্ড থাকলে সেটাকে driverRating-এ রাখুন
+      // Set old rating field to driverRating if exists
       if (typeof rating === 'number') {
         ride.rating.driverRating = rating;
       }
@@ -577,17 +578,17 @@ static async rejectRide(req, res) {
       }
       await ride.save();
 
-      // ড্রাইভারের মোট রেটিং আপডেট করুন (NaN সমস্যা প্রতিরোধ)
+      // Update driver's overall rating
       const driver = await Driver.findById(ride.driverProfileId);
       if (driver) {
-        // আগের রেটিং ও কাউন্ট NaN বা undefined হলে ০ ধরুন
+        // new rating
         const prevCount = typeof driver.rating.count === 'number' ? driver.rating.count : 0;
         const prevAverage = typeof driver.rating.average === 'number' ? driver.rating.average : 0;
         const newCount = prevCount + 1;
         let newAverage = ((prevAverage * prevCount) + ratingValue) / newCount;
-        // যদি NaN হয়, তাহলে ০ সেট করুন
+        // If NaN, set to 0
         if (isNaN(newAverage)) newAverage = 0;
-        driver.rating.average = Math.round(newAverage * 10) / 10; // ১ দশমিক ঘরে রাউন্ড করুন
+        driver.rating.average = Math.round(newAverage * 10) / 10;
         driver.rating.count = newCount;
         await driver.save();
       }
