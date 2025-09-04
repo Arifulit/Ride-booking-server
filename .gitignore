@@ -11,6 +11,9 @@ pids
 *.pid
 *.seed
 *.pid.lock
+.env
+.env.test
+.env.production
 
 # Coverage directory used by tools like istanbul
 coverage
