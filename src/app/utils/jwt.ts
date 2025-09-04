@@ -22,15 +22,15 @@ class JWTUtils {
     // JWT এর জন্য expiresIn string বা number হতে পারে
     const options: SignOptions = {};
     if (expiresIn) {
-      options.expiresIn = expiresIn as SignOptions['expiresIn'];
+      options.expiresIn = expiresIn as SignOptions["expiresIn"];
     } else if (process.env.JWT_ACCESS_EXPIRES_IN) {
       // If JWT_ACCESS_EXPIRES_IN is a number string, convert to number, else use as string (e.g., "1h")
       const envExpiresIn = process.env.JWT_ACCESS_EXPIRES_IN;
       options.expiresIn = !envExpiresIn
         ? undefined
         : isNaN(Number(envExpiresIn))
-        ? envExpiresIn as SignOptions['expiresIn']
-        : Number(envExpiresIn) as SignOptions['expiresIn'];
+        ? envExpiresIn as SignOptions["expiresIn"]
+        : Number(envExpiresIn) as SignOptions["expiresIn"];
     } else {
       options.expiresIn = "1h";
     }
