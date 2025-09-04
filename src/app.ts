@@ -1,14 +1,12 @@
-const express = require("express");
-const cors = require("cors");
-const helmet = require("helmet");
-const morgan = require("morgan");
-const rateLimit = require("express-rate-limit");
+import express, { Application, Request, Response } from "express";
+import cors from "cors";
+import helmet from "helmet";
+import morgan from "morgan";
+import rateLimit from "express-rate-limit";
+import { errorHandler, notFound } from "./app/middlewares/error.middleware";
+import apiRouter from "./app/routes/index";
 
-
-// Import middleware
-const { errorHandler, notFound } = require("./app/middlewares/error.middleware");
-
-const app = express();
+const app: Application = express();
 
 // Security middleware
 app.use(helmet());
@@ -16,14 +14,14 @@ app.use(cors());
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || "900000"), // 15 minutes
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "100"),
   message: {
     error: "Too many requests from this IP, please try again later.",
   },
 });
 
-app.get("/", (req, res) => {
+app.get("/", (req: Request, res: Response) => {
   res.json({ message: "Ride Booking API root route working 🚀" });
 });
 
@@ -38,9 +36,8 @@ if (process.env.NODE_ENV === "development") {
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-
 // Health check endpoint
-app.get("/health", (req, res) => {
+app.get("/health", (req: Request, res: Response) => {
   res.status(200).json({
     success: true,
     message: "Ride Booking API is running successfully",
@@ -50,11 +47,10 @@ app.get("/health", (req, res) => {
 });
 
 // Mount API routes
-const apiRouter = require("./app/routes/index.ts");
 app.use("/api/v1", apiRouter);
 
 // Error handling middleware
 app.use(notFound);
 app.use(errorHandler);
 
-module.exports = app;
+export default app;

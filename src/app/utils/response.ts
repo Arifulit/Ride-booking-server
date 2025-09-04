@@ -6,7 +6,8 @@ class ResponseUtils {
    * @param {string} message - Success message
    * @param {number} statusCode - HTTP status code
    */
-  static success(res, data = null, message = 'Success', statusCode = 200) {
+  // Bangla: success method er data parameter er type any kora hoise, jate object, array, null, sob kichu pathano jay
+  static success(res: any, data: any = null, message: string = "Success", statusCode: number = 200) {
     return res.status(statusCode).json({
       success: true,
       message,
@@ -22,7 +23,12 @@ class ResponseUtils {
    * @param {number} statusCode - HTTP status code
    * @param {Object} errors - Validation errors
    */
-  static error(res, message = 'Internal Server Error', statusCode = 500, errors = null) {
+  static error(
+    res: any,
+    message: string = "Internal Server Error",
+    statusCode: number = 500,
+    errors: any = null // Accepts array, object, or null
+  ) {
     return res.status(statusCode).json({
       success: false,
       message,
@@ -38,7 +44,8 @@ class ResponseUtils {
    * @param {Object} pagination - Pagination info
    * @param {string} message - Success message
    */
-  static paginated(res, data, pagination, message = 'Data retrieved successfully') {
+  // Bangla: paginated method er parameter gulo type any kora hoise, jate kono type error na thake
+  static paginated(res: any, data: any, pagination: any, message: string = "Data retrieved successfully") {
     return res.status(200).json({
       success: true,
       message,
@@ -49,4 +56,4 @@ class ResponseUtils {
   }
 }
 
-module.exports = ResponseUtils;
+export default ResponseUtils;

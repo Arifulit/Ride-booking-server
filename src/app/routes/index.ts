@@ -1,37 +1,42 @@
-const express = require("express");
-const userRoutes = require("../modules/user/user.routes");
-const authRoutes = require("../modules/auth/auth.routes");
-const driverRoutes = require("../modules/driver/driver.routes");
-const rideRoutes = require("../modules/ride/ride.routes");
-const adminRoutes = require("../modules/admin/admin.routes");
+import { Router } from "express";
+import { UserRoutes } from "../modules/user/user.routes";
+import { AuthRoutes } from "../modules/auth/auth.routes";
+import { DriverRoutes } from "../modules/driver/driver.routes";
+import { RideRoutes } from "../modules/ride/ride.routes";
+import { AdminRoutes } from "../modules/admin/admin.routes";
 
-const router = express.Router();
+export const router: Router = Router();
 
-const moduleRoutes = [
+interface ModuleRoute {
+  path: string;
+  route: Router;
+}
+
+const moduleRoutes: ModuleRoute[] = [
   {
     path: "/users",
-    route: userRoutes,
+    route: UserRoutes,
   },
   {
     path: "/auth",
-    route: authRoutes,
+    route: AuthRoutes, 
   },
   {
     path: "/drivers",
-    route: driverRoutes,
+    route: DriverRoutes,
   },
   {
     path: "/rides",
-    route: rideRoutes,
+    route: RideRoutes,
   },
   {
     path: "/admin",
-    route: adminRoutes,
+    route: AdminRoutes,
   },
 ];
 
-moduleRoutes.forEach((route) => {
+moduleRoutes.forEach((route: ModuleRoute) => {
   router.use(route.path, route.route);
 });
 
-module.exports = router;
+export default router;
