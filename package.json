@@ -2,7 +2,7 @@
   "name": "ride-booking-api",
   "version": "1.0.0",
   "description": "A secure, scalable ride booking API system with role-based authentication",
-  "main": "src/server.js",
+  "main": "dist/server.js",
   "scripts": {
     "start": "node dist/server.js",
     "dev": "ts-node-dev --respawn --transpile-only ./src/server.ts",
