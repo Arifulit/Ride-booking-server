@@ -19,9 +19,10 @@ class DriverController {
       const driver: IDriver | null = await Driver.findOne({ userId: req.user._id })
         .populate("userId", "-password");
 
-      if (!driver) {
-        return ResponseUtils.error(res, "Driver profile not found", 404);
-      }
+        if (!driver) {
+          ResponseUtils.error(res, "Driver profile not found", 404);
+          return;
+        }
 
       ResponseUtils.success(res, { driver }, "Driver profile retrieved successfully");
     } catch (error) {
@@ -73,7 +74,8 @@ class DriverController {
       );
 
       if (!driver) {
-        return ResponseUtils.error(res, "Driver profile not found", 404);
+        ResponseUtils.error(res, "Driver profile not found", 404);
+        return;
       }
 
       ResponseUtils.success(
@@ -96,12 +98,14 @@ class DriverController {
       const { longitude, latitude } = req.body;
 
       if (longitude === undefined || latitude === undefined) {
-        return ResponseUtils.error(res, "Longitude and latitude are required", 400);
+        ResponseUtils.error(res, "Longitude and latitude are required", 400);
+        return;
       }
 
       const driver: IDriver | null = await Driver.findOne({ userId: req.user._id });
       if (!driver) {
-        return ResponseUtils.error(res, "Driver profile not found", 404);
+        ResponseUtils.error(res, "Driver profile not found", 404);
+        return;
       }
 
       await driver.updateLocation(longitude, latitude);
@@ -224,7 +228,8 @@ class DriverController {
     try {
       const driver: IDriver | null = await Driver.findOne({ userId: req.user._id });
       if (!driver) {
-        return ResponseUtils.error(res, "Driver profile not found", 404);
+        ResponseUtils.error(res, "Driver profile not found", 404);
+        return;
       }
 
       const completedRides = await Ride.countDocuments({

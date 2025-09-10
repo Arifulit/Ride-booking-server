@@ -1,9 +1,12 @@
+
+// import { DecodedTokenPayload } from "./types";
 import JWTUtils from "../../utils/jwt";
 
 interface User {
-  id: string | number;
+  id?: string | number;
+  _id?: string | number;
   email?: string;
-  username?: string;
+  role?: string;
   [key: string]: any;
 }
 
@@ -11,12 +14,14 @@ interface TokenPair {
   accessToken: string;
   refreshToken: string;
   expiresIn?: number;
+  tokenType?: string;
 }
 
 interface DecodedToken {
-  userId: string | number;
+  userId?: string | number;
+  id?: string | number;
   email?: string;
-  username?: string;
+  role?: string;
   iat?: number;
   exp?: number;
   [key: string]: any;
@@ -25,30 +30,29 @@ interface DecodedToken {
 class AuthService {
   /**
    * Generate authentication tokens
-   * @param user - User object
-   * @returns Token information
    */
   static generateTokens(user: User): TokenPair {
-    return JWTUtils.generateTokenPair(user);
+    return JWTUtils.generateTokenPair({
+      _id: user._id ?? user.id,
+      email: user.email,
+      role: user.role,
+    });
   }
 
   /**
    * Verify authentication token
-   * @param token - JWT token
-   * @returns Decoded token payload
    */
-  static verifyToken(token: string): DecodedToken {
-    const payload = JWTUtils.verifyToken(token);
-    // Ensure userId is present, fallback to id if needed
-    return {
-      userId: payload.userId ?? payload.id,
-      email: payload.email,
-      username: payload.username,
-      iat: payload.iat,
-      exp: payload.exp,
-      ...payload
-    };
-  }
+}
+
+export interface DecodedTokenPayload {
+  userId?: string | number;
+  id?: string | number;
+  _id?: string | number;
+  email?: string;
+  role?: string;
+  iat?: number;
+  exp?: number;
+  [key: string]: any;
 }
 
 export default AuthService;

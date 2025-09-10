@@ -46,6 +46,7 @@ const driverSchema = new Schema<IDriver>(
       ref: "User",
       required: true,
       unique: true,
+      index: true,
     },
     licenseNumber: {
       type: String,
@@ -69,6 +70,7 @@ const driverSchema = new Schema<IDriver>(
         unique: true,
         trim: true,
         uppercase: true,
+        index: true,
       },
     },
     approvalStatus: {
@@ -109,11 +111,9 @@ const driverSchema = new Schema<IDriver>(
 );
 
 // Indexes
-driverSchema.index({ userId: 1 });
 driverSchema.index({ approvalStatus: 1 });
 driverSchema.index({ isOnline: 1 });
 driverSchema.index({ currentLocation: "2dsphere" });
-driverSchema.index({ "vehicleInfo.plateNumber": 1 });
 
 // Virtual field
 driverSchema.virtual("user", {

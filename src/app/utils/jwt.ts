@@ -1,3 +1,9 @@
+// import crypto from "crypto";
+// // import jwt from "jsonwebtoken";
+
+// const secret = crypto.randomBytes(32).toString("hex");
+// console.log("jwt secret:", secret);
+
 import jwt, { SignOptions } from "jsonwebtoken";
 
 interface IUserPayload {
@@ -11,58 +17,85 @@ interface ITokenPair {
   accessToken: string;
   refreshToken: string;
   tokenType: string;
-  expiresIn: number; // seconds
+  expiresIn: number; // in seconds
 }
 
 class JWTUtils {
-  // Access token generate
-  static generateToken(payload: Record<string, any>, expiresIn?: string | number): string {
-    const secret = process.env.JWT_ACCESS_SECRET || "your_access_secret";
-    
-    // JWT এর জন্য expiresIn string বা number হতে পারে
+  static verifyToken(token: string) {
+    throw new Error("Method not implemented.");
+  }
+  /**
+   * Generic function to generate a JWT token
+   */
+  static generateToken(
+    payload: Record<string, any>,
+    secret: string,
+    expiresIn?: string | number
+  ): string {
     const options: SignOptions = {};
-    if (expiresIn) {
-      options.expiresIn = expiresIn as SignOptions["expiresIn"];
-    } else if (process.env.JWT_ACCESS_EXPIRES_IN) {
-      // If JWT_ACCESS_EXPIRES_IN is a number string, convert to number, else use as string (e.g., "1h")
-      const envExpiresIn = process.env.JWT_ACCESS_EXPIRES_IN;
-      options.expiresIn = !envExpiresIn
-        ? undefined
-        : isNaN(Number(envExpiresIn))
-        ? envExpiresIn as SignOptions["expiresIn"]
-        : Number(envExpiresIn) as SignOptions["expiresIn"];
-    } else {
-      options.expiresIn = "1h";
-    }
-
+  if (expiresIn) options.expiresIn = expiresIn as any;
     return jwt.sign(payload, secret, options);
   }
 
-  // Token verify
-  static verifyToken(token: string): Record<string, any> {
-    const secret = process.env.JWT_ACCESS_SECRET || "your_access_secret";
+  /**
+   * Verify Access Token
+   */
+  static verifyAccessToken(token: string): Record<string, any> {
+    const secret = process.env.JWT_ACCESS_SECRET as string;
+    if (!secret) throw new Error("JWT_ACCESS_SECRET is not defined in .env");
     return jwt.verify(token, secret) as Record<string, any>;
   }
 
-  // Access + Refresh token generate
+  /**
+   * Verify Refresh Token
+   */
+  static verifyRefreshToken(token: string): Record<string, any> {
+    const secret = process.env.JWT_REFRESH_SECRET as string;
+    if (!secret) throw new Error("JWT_REFRESH_SECRET is not defined in .env");
+    return jwt.verify(token, secret) as Record<string, any>;
+  }
+
+  /**
+   * Generate Access + Refresh Token Pair
+   */
   static generateTokenPair(user: IUserPayload): ITokenPair {
     const id = user._id ?? user.id;
     const payload = { id, email: user.email, role: user.role };
 
-    // Access token
-    const accessToken = this.generateToken(payload, process.env.JWT_ACCESS_EXPIRES_IN || "1h");
+    const accessSecret = process.env.JWT_ACCESS_SECRET as string;
+    const refreshSecret = process.env.JWT_REFRESH_SECRET as string;
 
-    // Refresh token
-    const refreshToken = jwt.sign(
+    if (!accessSecret || !refreshSecret) {
+      throw new Error("JWT secrets are not defined in .env");
+    }
+
+    // Generate Access Token
+    const accessToken = this.generateToken(
       payload,
-      process.env.JWT_REFRESH_SECRET || "your_refresh_secret",
-      { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || "30d" } as SignOptions
+      accessSecret,
+      process.env.JWT_ACCESS_EXPIRES_IN || "1d"
     );
 
-    // Access token expiresIn in seconds
-    const expiresInStr = process.env.JWT_ACCESS_EXPIRES_IN || "3600";
-    let expiresIn = parseInt(expiresInStr, 10);
-    if (isNaN(expiresIn)) expiresIn = 3600;
+    // Generate Refresh Token
+    const refreshToken = this.generateToken(
+      payload,
+      refreshSecret,
+      process.env.JWT_REFRESH_EXPIRES_IN || "30d"
+    );
+
+    // Calculate expiresIn in seconds
+    let expiresIn = 86400; // default 1 day
+    const accessExpiry = process.env.JWT_ACCESS_EXPIRES_IN || "1d";
+
+    if (/^\d+$/.test(accessExpiry)) {
+      expiresIn = parseInt(accessExpiry, 10);
+    } else if (accessExpiry.endsWith("d")) {
+      expiresIn = parseInt(accessExpiry, 10) * 86400;
+    } else if (accessExpiry.endsWith("h")) {
+      expiresIn = parseInt(accessExpiry, 10) * 3600;
+    } else if (accessExpiry.endsWith("m")) {
+      expiresIn = parseInt(accessExpiry, 10) * 60;
+    }
 
     return {
       accessToken,

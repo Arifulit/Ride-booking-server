@@ -2,16 +2,14 @@ import { Request, Response, NextFunction } from "express";
 import ResponseUtils from "../utils/response";
 import Driver from "../modules/driver/driver.model";
 
-// Express Request er moddhe user ebong driver property add korar jonno custom interface
-// eta use korle req.user ba req.driver ke type error chara access kora jay
+// Custom request interface for user and driver
 interface AuthRequest extends Request {
   user?: any;
   driver?: any;
 }
 
 /**
- * Check if user has required role
- * @param allowedRoles - Array of allowed roles
+ * Role-based authorization middleware
  */
 export const authorize = (allowedRoles: string[]) => {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -32,9 +30,13 @@ export const authorize = (allowedRoles: string[]) => {
 };
 
 /**
- * Check if driver is approved and online for driver-specific actions
+ * Driver approval and online check middleware
  */
-export const requireApprovedDriver = async (req: AuthRequest, res: Response, next: NextFunction) => {
+export const requireApprovedDriver = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     if (!req.user || req.user.role !== "driver") {
       return ResponseUtils.error(res, "Driver access required", 403);

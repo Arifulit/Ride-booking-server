@@ -26,12 +26,14 @@ const userSchema: Schema<IUser> = new Schema(
       required: [true, "First name is required"],
       trim: true,
       maxlength: [50, "First name cannot exceed 50 characters"],
+      // default: "DefaultFirstName"
     },
     lastName: {
       type: String,
       required: [true, "Last name is required"],
       trim: true,
       maxlength: [50, "Last name cannot exceed 50 characters"],
+      // default: "DefaultLastName"
     },
     email: {
       type: String,
@@ -39,6 +41,7 @@ const userSchema: Schema<IUser> = new Schema(
       unique: true,
       lowercase: true,
       trim: true,
+      index: true,
     },
     password: {
       type: String,
@@ -80,7 +83,6 @@ const userSchema: Schema<IUser> = new Schema(
 );
 
 // ---------- Indexes ----------
-userSchema.index({ email: 1 });
 userSchema.index({ role: 1 });
 userSchema.index({ isBlocked: 1 });
 

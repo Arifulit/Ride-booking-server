@@ -8,45 +8,33 @@ import apiRouter from "./app/routes";
 
 const app: Application = express();
 
-// --------------------
-// 🔐 Security Middlewares
-// --------------------
-app.use(helmet()); // Secure HTTP headers
-app.use(cors());   // Enable CORS
+// Security middlewares
+app.use(helmet()); // Set security-related HTTP headers
+app.use(cors()); // Enable Cross-Origin Resource Sharing
 
-// --------------------
-// ⚡ Rate Limiting
-// --------------------
+// Rate limiting configuration
 const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || "900000"), // default: 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "100"),      // default: 100 requests
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || "900000"), // Time window (default: 15 minutes)
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "100"), // Max requests per window (default: 100)
   message: { error: "Too many requests from this IP, please try again later." },
 });
-app.use("/api", limiter);
+app.use("/api", limiter); // Apply rate limiter to all /api routes
 
-// --------------------
-// 📜 Logging (only dev mode)
-// --------------------
+// Logging (enabled only in development mode)
 if (process.env.NODE_ENV === "development") {
-  app.use(morgan("dev"));
+  app.use(morgan("dev")); // Log HTTP requests
 }
 
-// --------------------
-// 📦 Body Parsers
-// --------------------
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true }));
+// Body parsers
+app.use(express.json({ limit: "10mb" })); // Parse JSON payloads (max size 10MB)
+app.use(express.urlencoded({ extended: true })); // Parse URL-encoded payloads
 
-// --------------------
-// 🚀 Root Route
-// --------------------
+// Root route
 app.get("/", (req: Request, res: Response) => {
   res.json({ message: "🚖 Ride Booking API root route working!" });
 });
 
-// --------------------
-// 🏥 Health Check
-// --------------------
+// Health check endpoint
 app.get("/health", (req: Request, res: Response) => {
   res.status(200).json({
     success: true,
@@ -56,15 +44,11 @@ app.get("/health", (req: Request, res: Response) => {
   });
 });
 
-// --------------------
-// 📌 API Routes
-// --------------------
+// API routes
 app.use("/api/v1", apiRouter);
 
-// --------------------
-// ❌ Error Handlers
-// --------------------
-app.use(notFound);
-app.use(errorHandler);
+// Error handling middlewares
+app.use(notFound); // Handle 404 Not Found
+app.use(errorHandler); // Handle other errors
 
 export default app;

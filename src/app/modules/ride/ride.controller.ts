@@ -246,7 +246,11 @@ class RideController {
     next: NextFunction
   ) => {
     try {
-      const riderIdRaw = req.user?._id;
+      console.log("User in request:", req.user);
+      const riderIdRaw =
+        typeof req.user?._id === "object" && req.user?._id !== null
+          ? req.user._id.toString()
+          : (req.user?.id ? String(req.user.id) : undefined);
       if (
         !riderIdRaw ||
         typeof riderIdRaw !== "string" ||
@@ -306,9 +310,14 @@ class RideController {
     res: Response,
     next: NextFunction
   ) => {
+    console.log("User in request (driver):", req.user);
     try {
       const { rideId } = req.params;
-      const driverIdRaw = req.user?._id;
+      const driverIdRaw =
+        typeof req.user?._id === "object" && req.user?._id !== null
+          ? req.user._id.toString()
+          : (req.user?.id ? String(req.user.id) : undefined);
+
       if (
         !driverIdRaw ||
         typeof driverIdRaw !== "string" ||
@@ -337,3 +346,4 @@ class RideController {
 }
 
 export default RideController;
+
