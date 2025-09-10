@@ -66,7 +66,8 @@ class AuthController {
       // Check if user already exists
       const existingUser: IUser | null = await User.findOne({ email: userData.email });
       if (existingUser) {
-        return ResponseUtils.error(res, "User already exists with this email", 409);
+    ResponseUtils.error(res, "User already exists with this email", 409);
+    return;
       }
 
 
