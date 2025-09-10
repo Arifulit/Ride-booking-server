@@ -30,7 +30,7 @@ class ResponseUtils {
     return res.status(statusCode).json({
       success: false,
       message,
-      errors,
+      errors: errors || null,
       timestamp: new Date().toISOString(),
     });
   }
@@ -54,4 +54,9 @@ class ResponseUtils {
   }
 }
 
-export default ResponseUtils;
+export default {
+  error: ResponseUtils.error,
+  success: ResponseUtils.success,
+  paginated: ResponseUtils.paginated,
+  // ...other functions if any
+};

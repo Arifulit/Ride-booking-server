@@ -59,7 +59,7 @@ class AuthController {
   static async register(
     req: Request<{}, AuthResponse, RegisterRequestBody>, 
     res: Response<any>
-  ): Promise<Response | void> {
+  ): Promise<void> {
     try {
       const { role, licenseNumber, vehicleInfo, ...userData } = req.body;
 
@@ -109,7 +109,7 @@ class AuthController {
   static async login(
     req: Request<{}, AuthResponse, LoginRequestBody>, 
     res: Response<any>
-  ): Promise<Response | void> {
+  ): Promise<void> {
     try {
       const { email, password } = req.body;
 
@@ -180,7 +180,7 @@ class AuthController {
   static async getProfile(
     req: Request, 
     res: Response<ProfileResponse>
-  ): Promise<Response | void> {
+  ): Promise<void> {
     try {
 
       const user = req.user as any;
@@ -207,7 +207,7 @@ class AuthController {
   static async updateProfile(
     req: Request, 
     res: Response
-  ): Promise<Response | void> {
+  ): Promise<void> {
     try {
   const userId = req.user?._id;
       const { firstName, lastName, phone, profilePicture } = req.body;
