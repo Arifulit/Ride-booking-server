@@ -21,7 +21,8 @@ class RideController {
         typeof riderIdRaw !== "string" ||
         !mongoose.Types.ObjectId.isValid(riderIdRaw)
       ) {
-        return ResponseUtils.error(res, "Invalid rider ID", 400);
+        ResponseUtils.error(res, "Invalid rider ID", 400);
+        return;
       }
       const riderId = new mongoose.Types.ObjectId(riderIdRaw);
       const rides = await Ride.find({ riderId }).sort({ createdAt: -1 });
@@ -39,7 +40,10 @@ class RideController {
     try {
       const { rideId } = req.params;
       const ride = await Ride.findById(rideId);
-      if (!ride) return ResponseUtils.error(res, "Ride not found", 404);
+      if (!ride) {
+        ResponseUtils.error(res, "Ride not found", 404);
+        return;
+      }
       ride.status = "cancelled";
       await ride.save();
       ResponseUtils.success(res, { ride }, "Ride cancelled successfully");
@@ -57,7 +61,10 @@ class RideController {
       const { rideId } = req.params;
       const { rating } = req.body;
       const ride = await Ride.findById(rideId);
-      if (!ride) return ResponseUtils.error(res, "Ride not found", 404);
+      if (!ride) {
+        ResponseUtils.error(res, "Ride not found", 404);
+        return;
+      }
       (ride.rating ??= {}).driverRating = rating;
       await ride.save();
       ResponseUtils.success(res, { ride }, "Driver rated successfully");
@@ -74,7 +81,10 @@ class RideController {
     try {
       const { rideId } = req.params;
       const ride = await Ride.findById(rideId);
-      if (!ride) return ResponseUtils.error(res, "Ride not found", 404);
+      if (!ride) {
+        ResponseUtils.error(res, "Ride not found", 404);
+        return;
+      }
       ride.status = "rejected";
       await ride.save();
       ResponseUtils.success(res, { ride }, "Ride rejected successfully");
@@ -92,7 +102,10 @@ class RideController {
       const { rideId } = req.params;
       const { status } = req.body;
       const ride = await Ride.findById(rideId);
-      if (!ride) return ResponseUtils.error(res, "Ride not found", 404);
+      if (!ride) {
+        ResponseUtils.error(res, "Ride not found", 404);
+        return;
+      }
       ride.status = status;
       await ride.save();
       ResponseUtils.success(res, { ride }, "Ride status updated successfully");
@@ -109,7 +122,10 @@ class RideController {
     try {
       const { rideId } = req.params;
       const ride = await Ride.findById(rideId);
-      if (!ride) return ResponseUtils.error(res, "Ride not found", 404);
+      if (!ride) {
+        ResponseUtils.error(res, "Ride not found", 404);
+        return;
+      }
       ResponseUtils.success(res, { ride }, "Ride details fetched successfully");
     } catch (error: any) {
       next(error);
@@ -146,7 +162,8 @@ class RideController {
     try {
       const { longitude, latitude, radius = 10 } = req.body;
       if (typeof longitude !== "number" || typeof latitude !== "number") {
-        return ResponseUtils.error(res, "longitude ও latitude লাগবে", 400);
+        ResponseUtils.error(res, "longitude ও latitude লাগবে", 400);
+        return;
       }
       const drivers = await rideService.findNearbyDrivers(
         longitude,
@@ -220,11 +237,12 @@ class RideController {
     try {
       const { pickupLocation, destination, rideType = "economy" } = req.body;
       if (!pickupLocation || !destination) {
-        return ResponseUtils.error(
+        ResponseUtils.error(
           res,
           "pickupLocation ও destination লাগবে",
           400
         );
+        return;
       }
       const estimates = rideService.calculateEstimates(
         pickupLocation,
@@ -256,7 +274,8 @@ class RideController {
         typeof riderIdRaw !== "string" ||
         !mongoose.Types.ObjectId.isValid(riderIdRaw)
       ) {
-        return ResponseUtils.error(res, "Invalid rider ID", 400);
+        ResponseUtils.error(res, "Invalid rider ID", 400);
+        return;
       }
       const riderId = new mongoose.Types.ObjectId(riderIdRaw);
 
@@ -272,8 +291,10 @@ class RideController {
         riderId,
         status: { $in: ["requested", "accepted", "picked_up", "in_transit"] },
       });
-      if (activeRide)
-        return ResponseUtils.error(res, "You already have an active ride", 409);
+      if (activeRide) {
+        ResponseUtils.error(res, "You already have an active ride", 409);
+        return;
+      }
 
       const estimates = rideService.calculateEstimates(
         pickupLocation,
@@ -323,16 +344,19 @@ class RideController {
         typeof driverIdRaw !== "string" ||
         !mongoose.Types.ObjectId.isValid(driverIdRaw)
       ) {
-        return ResponseUtils.error(res, "Invalid driver ID", 400);
+        ResponseUtils.error(res, "Invalid driver ID", 400);
+        return;
       }
       const driverId = new mongoose.Types.ObjectId(driverIdRaw);
       const ride = await Ride.findOne({ _id: rideId, status: "requested" });
-      if (!ride)
-        return ResponseUtils.error(
+      if (!ride) {
+        ResponseUtils.error(
           res,
           "Ride not found or already accepted",
           404
         );
+        return;
+      }
       ride.driverId = driverId;
       ride.status = "accepted";
       await ride.save();

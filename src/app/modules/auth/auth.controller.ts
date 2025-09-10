@@ -91,7 +91,7 @@ class AuthController {
       user.lastLogin = new Date();
       await user.save();
 
-      return ResponseUtils.success(res, {
+      ResponseUtils.success(res, {
         user: user.getPublicProfile(),
         tokens
       }, "Registration successful", 201);
@@ -99,7 +99,7 @@ class AuthController {
     } catch (error) {
       console.error("Registration error:", error);
       const errorMessage = error instanceof Error ? error.message : "Registration failed";
-      return ResponseUtils.error(res, errorMessage, 500);
+  ResponseUtils.error(res, errorMessage, 500);
     }
   }
 
@@ -117,18 +117,18 @@ class AuthController {
       // ইমেইল দিয়ে ইউজার খুঁজুন
       const user = await User.findOne({ email }).select("+password") as any;
       if (!user) {
-        return ResponseUtils.error(res, "Invalid email or password", 401);
+    ResponseUtils.error(res, "Invalid email or password", 401);
       }
 
       // Check if user is blocked
       if (user.isBlocked) {
-        return ResponseUtils.error(res, "Account has been blocked. Contact support.", 403);
+    ResponseUtils.error(res, "Account has been blocked. Contact support.", 403);
       }
 
       // Verify password
       const isPasswordValid: boolean = await user.checkPassword(password);
       if (!isPasswordValid) {
-        return ResponseUtils.error(res, "Invalid email or password", 401);
+    ResponseUtils.error(res, "Invalid email or password", 401);
       }
 
       // Generate tokens
@@ -148,7 +148,7 @@ class AuthController {
         }
       }
 
-      return ResponseUtils.success(res, {
+      ResponseUtils.success(res, {
         user: user.getPublicProfile(),
         tokens,
         ...additionalData
@@ -156,7 +156,7 @@ class AuthController {
 
     } catch (error) {
       console.error("Login error:", error);
-      return ResponseUtils.error(res, "Login failed", 500);
+  ResponseUtils.error(res, "Login failed", 500);
     }
   }
 
@@ -167,10 +167,10 @@ class AuthController {
     try {
       // In a real application, you might want to blacklist the token
       // For now, we'll just send a success response
-      return ResponseUtils.success(res, null, "Logout successful");
+  ResponseUtils.success(res, null, "Logout successful");
     } catch (error) {
       console.error("Logout error:", error);
-      return ResponseUtils.error(res, "Logout failed", 500);
+  ResponseUtils.error(res, "Logout failed", 500);
     }
   }
 
@@ -194,10 +194,10 @@ class AuthController {
         }
       }
 
-      return ResponseUtils.success(res, profileData, "Profile retrieved successfully");
+  ResponseUtils.success(res, profileData, "Profile retrieved successfully");
     } catch (error) {
       console.error("Get profile error:", error);
-      return ResponseUtils.error(res, "Failed to retrieve profile", 500);
+  ResponseUtils.error(res, "Failed to retrieve profile", 500);
     }
   }
 
@@ -220,17 +220,18 @@ class AuthController {
       ) as any;
 
       if (!updatedUser) {
-        return ResponseUtils.error(res, "User not found", 404);
+        ResponseUtils.error(res, "User not found", 404);
+        return;
       }
 
-      return ResponseUtils.success(res, {
+      ResponseUtils.success(res, {
         user: updatedUser.getPublicProfile()
       }, "Profile updated successfully");
 
     } catch (error) {
       console.error("Update profile error:", error);
       const errorMessage = error instanceof Error ? error.message : "Failed to update profile";
-      return ResponseUtils.error(res, errorMessage, 500);
+  ResponseUtils.error(res, errorMessage, 500);
     }
   }
 }
