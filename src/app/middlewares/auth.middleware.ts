@@ -21,9 +21,12 @@ export const authenticate = async (
     const token = authHeader.substring(7); // Remove 'Bearer ' prefix
 
     try {
-  // Use JWTUtils.verifyAccessToken to verify token (uses .env secret)
-  // Make sure to send Authorization header as: Bearer <token>
-  const decoded = JWTUtils.verifyAccessToken(token) as { id?: string; _id?: string };
+      // Use JWTUtils.verifyAccessToken to verify token (uses .env secret)
+      // Make sure to send Authorization header as: Bearer <token>
+      const decoded = JWTUtils.verifyAccessToken(token) as {
+        id?: string;
+        _id?: string;
+      };
 
       // Get user from database (decoded.id or decoded._id)
       const userId = decoded.id ?? decoded._id;

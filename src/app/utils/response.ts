@@ -9,8 +9,8 @@ class ResponseUtils {
     data: any = null,
     message: string = "Success",
     statusCode: number = 200
-  ) {
-    return res.status(statusCode).json({
+  ): void {
+    res.status(statusCode).json({
       success: true,
       message,
       data,
@@ -26,8 +26,8 @@ class ResponseUtils {
     message: string = "Internal Server Error",
     statusCode: number = 500,
     errors: any = null
-  ) {
-    return res.status(statusCode).json({
+  ): void {
+    res.status(statusCode).json({
       success: false,
       message,
       errors: errors || null,
@@ -43,8 +43,8 @@ class ResponseUtils {
     data: any,
     pagination: any,
     message: string = "Data retrieved successfully"
-  ) {
-    return res.status(200).json({
+  ): void {
+    res.status(200).json({
       success: true,
       message,
       data,

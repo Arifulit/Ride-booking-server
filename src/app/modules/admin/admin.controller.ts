@@ -1,592 +1,500 @@
-
+/* eslint-disable no-unused-vars */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 
 import { Request, Response } from "express";
-import User, { IUser } from "../user/user.model";
+import User from "../user/user.model";
+import { IUser } from "../user/user.interface";
 import Driver from "../driver/driver.model";
-import { IDriver } from "../driver/driver.model";
-import Ride, { IRide } from "../ride/ride.model";
+import { IDriver } from "../driver/driver.interface";
+import Ride from "../ride/ride.model";
+import { IRide } from "../ride/ride.interface";
 import ResponseUtils from "../../utils/response";
+import type { ParsedQs } from "qs";
+import {
+  AdminRegisterBody,
+  BlockUserBody,
+  ApprovalBody,
+  RejectSuspendBody,
+  StatsQuery,
+} from "./admin.interface";
+import { catchAsync } from "../../utils/catchAsync";
 
-// Interface definitions for request parameters and query
-interface GetAllUsersQuery {
-  page?: string;
-  limit?: string;
-  role?: "admin" | "rider" | "driver";
-  search?: string;
+/** Admin registration */
+const adminRegister = catchAsync(
+  async (req: Request<{}, {}, AdminRegisterBody>, res: Response) => {
+    const { firstName, lastName, email, password, phone } = req.body;
+
+    const existing: IUser | null = await User.findOne({ email });
+    if (existing) {
+      ResponseUtils.error(res, "Email already registered", 409);
+      return;
+    }
+
+    const admin = new User({
+      firstName,
+      lastName,
+      email,
+      password,
+      phone,
+      role: "admin",
+    });
+    await admin.save();
+
+    const publicProfile = admin.getPublicProfile();
+    ResponseUtils.success(
+      res,
+      publicProfile,
+      "Admin registered successfully",
+      201
+    );
+  }
+);
+
+/** Get all users with pagination */
+function getRoleString(
+  role: string | ParsedQs | (string | ParsedQs)[] | undefined
+): string | undefined {
+  if (typeof role === "string") {
+    return role.toLowerCase();
+  }
+  if (Array.isArray(role) && typeof role[0] === "string") {
+    return role[0].toLowerCase();
+  }
+  return undefined;
 }
 
-interface GetAllDriversQuery {
-  page?: string;
-  limit?: string;
-  status?: "pending" | "approved" | "rejected" | "suspended";
-  search?: string;
-}
+const getAllUsers = catchAsync(
+  async (req: Request<{}, {}, {}, any>, res: Response) => {
+    const {
+      page: pageRaw = "1",
+      limit: limitRaw = "10",
+      role,
+      search,
+    } = req.query;
 
-interface GetAllRidesQuery {
-  page?: string;
-  limit?: string;
-  status?: string;
-  riderId?: string;
-  driverId?: string;
-}
+    const page =
+      typeof pageRaw === "string"
+        ? pageRaw
+        : Array.isArray(pageRaw) && typeof pageRaw[0] === "string"
+        ? pageRaw[0]
+        : "1";
+    const limit =
+      typeof limitRaw === "string"
+        ? limitRaw
+        : Array.isArray(limitRaw) && typeof limitRaw[0] === "string"
+        ? limitRaw[0]
+        : "10";
 
-interface PaginationQuery {
-  page?: string;
-  limit?: string;
-}
+    const query: any = {};
+    const roleStr = getRoleString(role);
+    if (roleStr && ["admin", "rider", "driver"].includes(roleStr))
+      query.role = roleStr;
 
-interface StatsQuery {
-  period?: "today" | "week" | "month";
-}
+    let searchStr: string | undefined;
+    if (typeof search === "string") {
+      searchStr = search;
+    } else if (Array.isArray(search) && typeof search[0] === "string") {
+      searchStr = search[0];
+    }
+    if (searchStr)
+      query.$or = [
+        { firstName: { $regex: searchStr, $options: "i" } },
+        { lastName: { $regex: searchStr, $options: "i" } },
+        { email: { $regex: searchStr, $options: "i" } },
+      ];
 
-interface BlockUserBody {
-  reason?: string;
-}
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
 
-interface ApprovalBody {
-  notes?: string;
-}
+    const users: IUser[] = await User.find(query)
+      .select("-password")
+      .sort({ createdAt: -1 })
+      .limit(limitNum)
+      .skip((pageNum - 1) * limitNum);
 
-interface RejectSuspendBody {
-  reason?: string;
-}
+    const total: number = await User.countDocuments(query);
 
-interface AdminRegisterBody {
-  firstName: string;
-  lastName: string;
-  email: string;
-  password: string;
-  phone: string;
-}
-
-interface PaginationMeta {
-  currentPage: number;
-  totalPages: number;
-  totalUsers?: number;
-  totalDrivers?: number;
-  totalRides?: number;
-  hasNext: boolean;
-  hasPrev: boolean;
-}
-
-interface SystemOverview {
-  totalUsers: number;
-  totalRiders: number;
-  totalDrivers: number;
-  totalRides: number;
-  activeRides: number;
-  onlineDrivers: number;
-  pendingDriverApprovals: number;
-}
-
-interface EarningsData {
-  totalRevenue: number;
-  totalRides: number;
-  averageFare: number;
-  totalDistance: number;
-}
-
-class AdminController {
-  /**
-   * Get all users with pagination
-   */
-  static async getAllUsers(req: Request<{}, {}, {}, GetAllUsersQuery>, res: Response): Promise<Response | void> {
-    try {
-      const { page = "1", limit = "10", role, search } = req.query;
-      
-      let query: any = {};
-      if (role && ["admin", "rider", "driver"].includes(role)) {
-        query.role = role;
-      }
-      
-      if (search) {
-        query.$or = [
-          { firstName: { $regex: search, $options: "i" } },
-          { lastName: { $regex: search, $options: "i" } },
-          { email: { $regex: search, $options: "i" } }
-        ];
-      }
-
-      const pageNum = parseInt(page);
-      const limitNum = parseInt(limit);
-
-      const users: IUser[] = await User.find(query)
-        .select("-password")
-        .sort({ createdAt: -1 })
-        .limit(limitNum)
-        .skip((pageNum - 1) * limitNum);
-
-      const total: number = await User.countDocuments(query);
-
-      const paginationMeta: PaginationMeta = {
+    ResponseUtils.paginated(
+      res,
+      users,
+      {
         currentPage: pageNum,
         totalPages: Math.ceil(total / limitNum),
         totalUsers: total,
         hasNext: pageNum * limitNum < total,
-        hasPrev: pageNum > 1
-      };
-
-      return ResponseUtils.paginated(res, users, paginationMeta, "Users retrieved successfully");
-
-    } catch (error) {
-      console.error("Get all users error:", error);
-      return ResponseUtils.error(res, "Failed to retrieve users", 500);
-    }
+        hasPrev: pageNum > 1,
+      },
+      "Users retrieved successfully"
+    );
   }
+);
 
-  /**
-   * Block a user
-   */
-  static async blockUser(req: Request<{ userId: string }, {}, BlockUserBody>, res: Response): Promise<Response | void> {
-    try {
-      const { userId } = req.params;
-      const { reason } = req.body;
+/** Block user */
+const blockUser = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.params.userId;
 
-      const user: IUser | null = await User.findByIdAndUpdate(
-        userId,
-        { isBlocked: true },
-        { new: true }
-      ).select("-password");
+  const user: IUser | null = await User.findByIdAndUpdate(
+    userId,
+    { isBlocked: true },
+    { new: true }
+  ).select("-password");
 
-      if (!user) {
-        return ResponseUtils.error(res, "User not found", 404);
-      }
-
-      return ResponseUtils.success(res, { user }, "User blocked successfully");
-
-    } catch (error) {
-      console.error("Block user error:", error);
-      return ResponseUtils.error(res, "Failed to block user", 500);
-    }
+  if (!user) {
+    ResponseUtils.error(res, "User not found", 404);
+    return;
   }
+  ResponseUtils.success(res, { user }, "User blocked successfully");
+});
 
-  /**
-   * Unblock a user
-   */
-  static async unblockUser(req: Request<{ userId: string }>, res: Response): Promise<Response | void> {
-    try {
-      const { userId } = req.params;
+/** Unblock user */
+const unblockUser = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.params.userId;
 
-      const user: IUser | null = await User.findByIdAndUpdate(
-        userId,
-        { isBlocked: false },
-        { new: true }
-      ).select("-password");
+  const user: IUser | null = await User.findByIdAndUpdate(
+    userId,
+    { isBlocked: false },
+    { new: true }
+  ).select("-password");
 
-      if (!user) {
-        return ResponseUtils.error(res, "User not found", 404);
-      }
-
-      return ResponseUtils.success(res, { user }, "User unblocked successfully");
-
-    } catch (error) {
-      console.error("Unblock user error:", error);
-      return ResponseUtils.error(res, "Failed to unblock user", 500);
-    }
+  if (!user) {
+    ResponseUtils.error(res, "User not found", 404);
+    return;
   }
+  ResponseUtils.success(res, { user }, "User unblocked successfully");
+});
 
-  /**
-   * Get all drivers with pagination
-   */
-  static async getAllDrivers(req: Request<{}, {}, {}, GetAllDriversQuery>, res: Response): Promise<Response | void> {
-    try {
-      const { page = "1", limit = "10", status, search } = req.query;
-      
-      let query: any = {};
-      if (status && ["pending", "approved", "rejected", "suspended"].includes(status)) {
-        query.approvalStatus = status;
-      }
+/** Get all drivers with pagination */
 
-      const pageNum = parseInt(page);
-      const limitNum = parseInt(limit);
+function getStringParam(param: unknown, defaultValue: string = ""): string {
+  if (typeof param === "string") return param;
+  if (Array.isArray(param) && typeof param[0] === "string") return param[0];
+  return defaultValue;
+}
 
-      const drivers: IDriver[] = await Driver.find(query)
-        .populate("userId", "firstName lastName email phone isBlocked")
-        .sort({ createdAt: -1 })
-        .limit(limitNum)
-        .skip((pageNum - 1) * limitNum);
+const getAllDrivers = catchAsync(async (req: Request, res: Response) => {
+  const page = getStringParam(req.query.page, "1");
+  const limit = getStringParam(req.query.limit, "10");
+  const status = getStringParam(req.query.status);
+  const search = getStringParam(req.query.search);
+  const query: any = {};
+  if (
+    status &&
+    ["pending", "approved", "rejected", "suspended"].includes(status)
+  )
+    query.approvalStatus = status;
 
-      // Apply search filter after population if needed
-      let filteredDrivers = drivers;
-      if (search) {
-        filteredDrivers = drivers.filter((driver: any) => 
-          driver.userId.firstName.toLowerCase().includes(search.toLowerCase()) ||
-          driver.userId.lastName.toLowerCase().includes(search.toLowerCase()) ||
-          driver.userId.email.toLowerCase().includes(search.toLowerCase()) ||
-          driver.licenseNumber.toLowerCase().includes(search.toLowerCase())
+  const pageNum = parseInt(page);
+  const limitNum = parseInt(limit);
+
+  const drivers: IDriver[] = await Driver.find(query)
+    .populate("userId", "firstName lastName email phone isBlocked")
+    .sort({ createdAt: -1 })
+    .limit(limitNum)
+    .skip((pageNum - 1) * limitNum);
+
+  const filteredDrivers = search
+    ? drivers.filter((d) => {
+        const user =
+          typeof d.userId === "object" &&
+          d.userId !== null &&
+          "firstName" in d.userId
+            ? (d.userId as unknown as IUser)
+            : null;
+        return (
+          (user &&
+            (user.firstName?.toLowerCase().includes(search.toLowerCase()) ||
+              user.lastName?.toLowerCase().includes(search.toLowerCase()) ||
+              user.email?.toLowerCase().includes(search.toLowerCase()))) ||
+          d.licenseNumber.toLowerCase().includes(search.toLowerCase())
         );
-      }
+      })
+    : drivers;
 
-      const total: number = await Driver.countDocuments(query);
+  const total: number = await Driver.countDocuments(query);
 
-      const paginationMeta: PaginationMeta = {
-        currentPage: pageNum,
-        totalPages: Math.ceil(total / limitNum),
-        totalDrivers: total,
-        hasNext: pageNum * limitNum < total,
-        hasPrev: pageNum > 1
-      };
+  ResponseUtils.paginated(
+    res,
+    filteredDrivers,
+    {
+      currentPage: pageNum,
+      totalPages: Math.ceil(total / limitNum),
+      totalDrivers: total,
+      hasNext: pageNum * limitNum < total,
+      hasPrev: pageNum > 1,
+    },
+    "Drivers retrieved successfully"
+  );
+});
 
-      return ResponseUtils.paginated(res, filteredDrivers, paginationMeta, "Drivers retrieved successfully");
+/** Get pending driver applications */
 
-    } catch (error) {
-      console.error("Get all drivers error:", error);
-      return ResponseUtils.error(res, "Failed to retrieve drivers", 500);
-    }
+const getPendingDrivers = catchAsync(async (req: Request, res: Response) => {
+  const page = getStringParam(req.query.page, "1");
+  const limit = getStringParam(req.query.limit, "10");
+  const pageNum = parseInt(page);
+  const limitNum = parseInt(limit);
+  const drivers: IDriver[] = await Driver.find({ approvalStatus: "pending" })
+    .populate("userId", "firstName lastName email phone")
+    .sort({ createdAt: -1 })
+    .limit(limitNum)
+    .skip((pageNum - 1) * limitNum);
+  const total: number = await Driver.countDocuments({
+    approvalStatus: "pending",
+  });
+  const paginationMeta = {
+    currentPage: pageNum,
+    totalPages: Math.ceil(total / limitNum),
+    totalDrivers: total,
+    hasNext: pageNum * limitNum < total,
+    hasPrev: pageNum > 1,
+  };
+  ResponseUtils.paginated(
+    res,
+    drivers,
+    paginationMeta,
+    "Pending drivers retrieved successfully"
+  );
+});
+
+/** Approve driver */
+const approveDriver = catchAsync(async (req: Request, res: Response) => {
+  const driverId = req.params.driverId;
+  const { notes } = req.body;
+
+  const driver: IDriver | null = await Driver.findByIdAndUpdate(
+    driverId,
+    { approvalStatus: "approved", approvalNotes: notes || "Approved by admin" },
+    { new: true }
+  ).populate("userId", "firstName lastName email phone");
+
+  if (!driver) {
+    ResponseUtils.error(res, "Driver not found", 404);
+    return;
   }
+  ResponseUtils.success(res, { driver }, "Driver approved successfully");
+});
 
-  /**
-   * Get pending driver applications
-   */
-  static async getPendingDrivers(req: Request<{}, {}, {}, PaginationQuery>, res: Response): Promise<Response | void> {
-    try {
-      const { page = "1", limit = "10" } = req.query;
+/** Reject driver */
+const rejectDriver = catchAsync(async (req: Request, res: Response) => {
+  const driverId = req.params.driverId;
+  const { reason } = req.body;
 
-      const pageNum = parseInt(page);
-      const limitNum = parseInt(limit);
+  const driver: IDriver | null = await Driver.findByIdAndUpdate(
+    driverId,
+    {
+      approvalStatus: "rejected",
+      approvalNotes: reason || "Rejected by admin",
+    },
+    { new: true }
+  ).populate("userId", "firstName lastName email phone");
 
-      const drivers: IDriver[] = await Driver.find({ approvalStatus: "pending" })
-        .populate("userId", "firstName lastName email phone")
-        .sort({ createdAt: -1 })
-        .limit(limitNum)
-        .skip((pageNum - 1) * limitNum);
-
-      const total: number = await Driver.countDocuments({ approvalStatus: "pending" });
-
-      const paginationMeta: PaginationMeta = {
-        currentPage: pageNum,
-        totalPages: Math.ceil(total / limitNum),
-        totalDrivers: total,
-        hasNext: pageNum * limitNum < total,
-        hasPrev: pageNum > 1
-      };
-
-      return ResponseUtils.paginated(res, drivers, paginationMeta, "Pending drivers retrieved successfully");
-
-    } catch (error) {
-      console.error("Get pending drivers error:", error);
-      return ResponseUtils.error(res, "Failed to retrieve pending drivers", 500);
-    }
+  if (!driver) {
+    ResponseUtils.error(res, "Driver not found", 404);
+    return;
   }
+  ResponseUtils.success(res, { driver }, "Driver application rejected");
+});
 
-  /**
-   * Approve a driver
-   */
-  static async approveDriver(req: Request<{ driverId: string }, {}, ApprovalBody>, res: Response): Promise<Response | void> {
-    try {
-      const { driverId } = req.params;
-      const { notes } = req.body;
+/** Suspend driver */
+const suspendDriver = catchAsync(async (req: Request, res: Response) => {
+  const driverId = req.params.driverId;
+  const { reason } = req.body;
 
-      const driver: IDriver | null = await Driver.findByIdAndUpdate(
-        driverId,
-        { 
-          approvalStatus: "approved",
-          approvalNotes: notes || "Approved by admin"
-        },
-        { new: true }
-      ).populate("userId", "firstName lastName email phone");
+  const driver: IDriver | null = await Driver.findByIdAndUpdate(
+    driverId,
+    {
+      approvalStatus: "suspended",
+      isOnline: false,
+      approvalNotes: reason || "Suspended by admin",
+    },
+    { new: true }
+  ).populate("userId", "firstName lastName email phone");
 
-      if (!driver) {
-        return ResponseUtils.error(res, "Driver not found", 404);
-      }
-
-      return ResponseUtils.success(res, { driver }, "Driver approved successfully");
-
-    } catch (error) {
-      console.error("Approve driver error:", error);
-      return ResponseUtils.error(res, "Failed to approve driver", 500);
-    }
+  if (!driver) {
+    ResponseUtils.error(res, "Driver not found", 404);
+    return;
   }
+  ResponseUtils.success(res, { driver }, "Driver suspended successfully");
+});
 
-  /**
-   * Reject a driver
-   */
-  static async rejectDriver(req: Request<{ driverId: string }, {}, RejectSuspendBody>, res: Response): Promise<Response | void> {
-    try {
-      const { driverId } = req.params;
-      const { reason } = req.body;
+/** Get all rides with pagination */
 
-      const driver: IDriver | null = await Driver.findByIdAndUpdate(
-        driverId,
-        { 
-          approvalStatus: "rejected",
-          approvalNotes: reason || "Rejected by admin"
-        },
-        { new: true }
-      ).populate("userId", "firstName lastName email phone");
+const getAllRides = catchAsync(
+  async (req: Request<{}, {}, {}, any>, res: Response) => {
+    const page = getStringParam(req.query.page, "1");
+    const limit = getStringParam(req.query.limit, "10");
+    const status = getStringParam(req.query.status);
+    const riderId = getStringParam(req.query.riderId);
+    const driverId = getStringParam(req.query.driverId);
+    const query: any = {};
+    if (status) query.status = status;
+    if (riderId) query.riderId = riderId;
+    if (driverId) query.driverId = driverId;
 
-      if (!driver) {
-        return ResponseUtils.error(res, "Driver not found", 404);
-      }
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
 
-      return ResponseUtils.success(res, { driver }, "Driver application rejected");
+    const rides: IRide[] = await Ride.find(query)
+      .populate("riderId", "firstName lastName email phone")
+      .populate("driver", "firstName lastName email phone")
+      .populate("driverProfile", "vehicleInfo rating")
+      .sort({ createdAt: -1 })
+      .limit(limitNum)
+      .skip((pageNum - 1) * limitNum);
 
-    } catch (error) {
-      console.error("Reject driver error:", error);
-      return ResponseUtils.error(res, "Failed to reject driver", 500);
-    }
-  }
+    const total: number = await Ride.countDocuments(query);
 
-  /**
-   * Suspend a driver
-   */
-  static async suspendDriver(req: Request<{ driverId: string }, {}, RejectSuspendBody>, res: Response): Promise<Response | void> {
-    try {
-      const { driverId } = req.params;
-      const { reason } = req.body;
-
-      const driver: IDriver | null = await Driver.findByIdAndUpdate(
-        driverId,
-        { 
-          approvalStatus: "suspended",
-          isOnline: false,
-          approvalNotes: reason || "Suspended by admin"
-        },
-        { new: true }
-      ).populate("userId", "firstName lastName email phone");
-
-      if (!driver) {
-        return ResponseUtils.error(res, "Driver not found", 404);
-      }
-
-      return ResponseUtils.success(res, { driver }, "Driver suspended successfully");
-
-    } catch (error) {
-      console.error("Suspend driver error:", error);
-      return ResponseUtils.error(res, "Failed to suspend driver", 500);
-    }
-  }
-
-  /**
-   * Get all rides with pagination
-   */
-  static async getAllRides(req: Request<{}, {}, {}, GetAllRidesQuery>, res: Response): Promise<Response | void> {
-    try {
-      const { page = "1", limit = "10", status, riderId, driverId } = req.query;
-      
-      let query: any = {};
-      if (status) query.status = status;
-      if (riderId) query.riderId = riderId;
-      if (driverId) query.driverId = driverId;
-
-      const pageNum = parseInt(page);
-      const limitNum = parseInt(limit);
-
-      const rides: IRide[] = await Ride.find(query)
-        .populate("riderId", "firstName lastName email phone")
-        .populate("driver", "firstName lastName email phone")
-        .populate("driverProfile", "vehicleInfo rating")
-        .sort({ createdAt: -1 })
-        .limit(limitNum)
-        .skip((pageNum - 1) * limitNum);
-
-      const total: number = await Ride.countDocuments(query);
-
-      const paginationMeta: PaginationMeta = {
+    ResponseUtils.paginated(
+      res,
+      rides,
+      {
         currentPage: pageNum,
         totalPages: Math.ceil(total / limitNum),
         totalRides: total,
         hasNext: pageNum * limitNum < total,
-        hasPrev: pageNum > 1
-      };
-
-      return ResponseUtils.paginated(res, rides, paginationMeta, "Rides retrieved successfully");
-
-    } catch (error) {
-      console.error("Get all rides error:", error);
-      return ResponseUtils.error(res, "Failed to retrieve rides", 500);
-    }
+        hasPrev: pageNum > 1,
+      },
+      "Rides retrieved successfully"
+    );
   }
+);
 
-  /**
-   * Get ride statistics
-   */
-  static async getRideStats(req: Request<{}, {}, {}, StatsQuery>, res: Response): Promise<Response | void> {
-    try {
-      const { period = "month" } = req.query;
+/** Ride statistics */
 
-      // Calculate date range
-      const now = new Date();
-      let startDate: Date;
-      
-      if (period === "today") {
-        startDate = new Date(now.setHours(0, 0, 0, 0));
-      } else if (period === "week") {
-        startDate = new Date(now.setDate(now.getDate() - 7));
-      } else if (period === "month") {
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-      } else {
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-      }
+const getRideStats = catchAsync(
+  async (req: Request<{}, {}, {}, StatsQuery>, res: Response) => {
+    const period = getStringParam(req.query.period, "month");
+    const now = new Date();
+    let startDate: Date;
 
-      const stats = await Ride.aggregate([
-        { $match: { createdAt: { $gte: startDate } } },
-        {
-          $group: {
-            _id: "$status",
-            count: { $sum: 1 },
-            totalFare: { $sum: "$fare.actual" }
-          }
-        }
-      ]);
+    if (period === "today") startDate = new Date(now.setHours(0, 0, 0, 0));
+    else if (period === "week")
+      startDate = new Date(now.setDate(now.getDate() - 7));
+    else startDate = new Date(now.getFullYear(), now.getMonth(), 1);
 
-      const totalRides: number = await Ride.countDocuments({ createdAt: { $gte: startDate } });
-      const totalRevenue = await Ride.aggregate([
-        { $match: { status: "completed", createdAt: { $gte: startDate } } },
-        { $group: { _id: null, total: { $sum: "$fare.actual" } } }
-      ]);
+    const stats = await Ride.aggregate([
+      { $match: { createdAt: { $gte: startDate } } },
+      {
+        $group: {
+          _id: "$status",
+          count: { $sum: 1 },
+          totalFare: { $sum: "$fare.actual" },
+        },
+      },
+    ]);
 
-      return ResponseUtils.success(res, {
+    const totalRides: number = await Ride.countDocuments({
+      createdAt: { $gte: startDate },
+    });
+    const totalRevenue = await Ride.aggregate([
+      { $match: { status: "completed", createdAt: { $gte: startDate } } },
+      { $group: { _id: null, total: { $sum: "$fare.actual" } } },
+    ]);
+
+    ResponseUtils.success(
+      res,
+      {
         period,
         totalRides,
         totalRevenue: totalRevenue[0]?.total || 0,
-        statusBreakdown: stats
-      }, "Ride statistics retrieved successfully");
-
-    } catch (error) {
-      console.error("Get ride stats error:", error);
-      return ResponseUtils.error(res, "Failed to retrieve ride statistics", 500);
-    }
+        statusBreakdown: stats,
+      },
+      "Ride statistics retrieved successfully"
+    );
   }
+);
 
-  /**
-   * Get system overview
-   */
-  static async getSystemOverview(req: Request, res: Response): Promise<Response | void> {
-    try {
-      // Get counts
-      const totalUsers: number = await User.countDocuments();
-      const totalRiders: number = await User.countDocuments({ role: "rider" });
-      const totalDrivers: number = await Driver.countDocuments();
-      const totalRides: number = await Ride.countDocuments();
-      const activeRides: number = await Ride.countDocuments({ 
-        status: { $in: ["requested", "accepted", "picked_up", "in_transit"] } 
-      });
-      const onlineDrivers: number = await Driver.countDocuments({ 
-        isOnline: true,
-        approvalStatus: "approved"
-      });
+/** System overview */
+const getSystemOverview = catchAsync(async (req: Request, res: Response) => {
+  const totalUsers = await User.countDocuments();
+  const totalRiders = await User.countDocuments({ role: "rider" });
+  const totalDrivers = await Driver.countDocuments();
+  const totalRides = await Ride.countDocuments();
+  const activeRides = await Ride.countDocuments({
+    status: { $in: ["requested", "accepted", "picked_up", "in_transit"] },
+  });
+  const onlineDrivers = await Driver.countDocuments({
+    isOnline: true,
+    approvalStatus: "approved",
+  });
+  const pendingDriverApprovals = await Driver.countDocuments({
+    approvalStatus: "pending",
+  });
 
-      // Get pending items
-      const pendingDriverApprovals: number = await Driver.countDocuments({ approvalStatus: "pending" });
+  const recentRides = await Ride.find()
+    .populate("riderId", "firstName lastName")
+    .populate("driver", "firstName lastName")
+    .sort({ createdAt: -1 })
+    .limit(5);
 
-      // Recent activity
-      const recentRides: IRide[] = await Ride.find()
-        .populate("riderId", "firstName lastName")
-        .populate("driver", "firstName lastName")
-        .sort({ createdAt: -1 })
-        .limit(5);
-
-      const overview: SystemOverview = {
+  ResponseUtils.success(
+    res,
+    {
+      overview: {
         totalUsers,
         totalRiders,
         totalDrivers,
         totalRides,
         activeRides,
         onlineDrivers,
-        pendingDriverApprovals
-      };
+        pendingDriverApprovals,
+      },
+      recentActivity: recentRides,
+    },
+    "System overview retrieved successfully"
+  );
+});
 
-      return ResponseUtils.success(res, {
-        overview,
-        recentActivity: recentRides
-      }, "System overview retrieved successfully");
+/** Earnings report */
 
-    } catch (error) {
-      console.error("Get system overview error:", error);
-      return ResponseUtils.error(res, "Failed to retrieve system overview", 500);
-    }
-  }
+const getEarningsReport = catchAsync(async (req: Request, res: Response) => {
+  const period = getStringParam(req.query.period, "month");
+  const now = new Date();
+  let startDate: Date;
 
-  /**
-   * Get earnings report
-   */
-  static async getEarningsReport(req: Request<{}, {}, {}, StatsQuery>, res: Response): Promise<Response | void> {
-    try {
-      const { period = "month" } = req.query;
+  if (period === "today") startDate = new Date(now.setHours(0, 0, 0, 0));
+  else if (period === "week")
+    startDate = new Date(now.setDate(now.getDate() - 7));
+  else startDate = new Date(now.getFullYear(), now.getMonth(), 1);
 
-      const now = new Date();
-      let startDate: Date;
-      
-      if (period === "today") {
-        startDate = new Date(now.setHours(0, 0, 0, 0));
-      } else if (period === "week") {
-        startDate = new Date(now.setDate(now.getDate() - 7));
-      } else if (period === "month") {
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-      } else {
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-      }
+  const earningsData = await Ride.aggregate([
+    { $match: { status: "completed", createdAt: { $gte: startDate } } },
+    {
+      $group: {
+        _id: null,
+        totalRevenue: { $sum: "$fare.actual" },
+        totalRides: { $sum: 1 },
+        averageFare: { $avg: "$fare.actual" },
+        totalDistance: { $sum: "$distance.actual" },
+      },
+    },
+  ]);
 
-      const earningsData = await Ride.aggregate([
-        { 
-          $match: { 
-            status: "completed",
-            createdAt: { $gte: startDate }
-          } 
-        },
-        {
-          $group: {
-            _id: null,
-            totalRevenue: { $sum: "$fare.actual" },
-            totalRides: { $sum: 1 },
-            averageFare: { $avg: "$fare.actual" },
-            totalDistance: { $sum: "$distance.actual" }
-          }
-        }
-      ]);
+  const result = earningsData[0] || {
+    totalRevenue: 0,
+    totalRides: 0,
+    averageFare: 0,
+    totalDistance: 0,
+  };
+  ResponseUtils.success(
+    res,
+    { period, ...result },
+    "Earnings report retrieved successfully"
+  );
+});
 
-      const result: EarningsData = earningsData[0] || {
-        totalRevenue: 0,
-        totalRides: 0,
-        averageFare: 0,
-        totalDistance: 0
-      };
-
-      return ResponseUtils.success(res, {
-        period,
-        ...result
-      }, "Earnings report retrieved successfully");
-
-    } catch (error) {
-      console.error("Get earnings report error:", error);
-      return ResponseUtils.error(res, "Failed to retrieve earnings report", 500);
-    }
-  }
-
-  /**
-   * Admin Registration
-   */
-  static async adminRegister(req: Request<{}, {}, AdminRegisterBody>, res: Response): Promise<Response | void> {
-    try {
-      const { firstName, lastName, email, password, phone } = req.body;
-      
-      // Check if email already exists
-      const existing: IUser | null = await User.findOne({ email });
-      if (existing) {
-        return ResponseUtils.error(res, "Email already registered", 409);
-      }
-      
-      // Create admin user
-      const admin = new User({
-        firstName,
-        lastName,
-        email,
-        password,
-        phone,
-        role: "admin"
-      });
-      
-      await admin.save();
-      const publicProfile = admin.getPublicProfile();
-      
-      return ResponseUtils.success(res, publicProfile, "Admin registered successfully", 201);
-      
-    } catch (error) {
-      console.error("Admin registration error:", error);
-      return ResponseUtils.error(res, "Failed to register admin", 500);
-    }
-  }
-}
-
-export default AdminController;
+export const AdminController = {
+  adminRegister,
+  getAllUsers,
+  blockUser,
+  unblockUser,
+  getAllDrivers,
+  getPendingDrivers,
+  approveDriver,
+  rejectDriver,
+  suspendDriver,
+  getAllRides,
+  getRideStats,
+  getSystemOverview,
+  getEarningsReport,
+};

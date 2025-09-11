@@ -33,7 +33,7 @@ class JWTUtils {
     expiresIn?: string | number
   ): string {
     const options: SignOptions = {};
-  if (expiresIn) options.expiresIn = expiresIn as any;
+    if (expiresIn) options.expiresIn = expiresIn as any;
     return jwt.sign(payload, secret, options);
   }
 

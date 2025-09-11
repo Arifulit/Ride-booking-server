@@ -1,4 +1,3 @@
-
 import { IUser } from "../modules/user/user.model";
 import { Request } from "express";
 

@@ -1,4 +1,3 @@
-
 // Zod library import
 import { z, ZodSchema } from "zod";
 // ResponseUtils import
@@ -22,7 +21,7 @@ export const validateBody = (schema: ZodSchema) => {
       // Bangla: error gulo format kore response pathano hocche
       const errors = err.errors?.map((e: any) => ({
         field: e.path.join("."),
-        message: e.message
+        message: e.message,
       })) || [{ message: err.message }];
       return ResponseUtils.error(res, "Validation failed", 400, errors);
     }
@@ -45,7 +44,7 @@ export const validateQuery = (schema: ZodSchema) => {
       // Bangla: error gulo format kore response pathano hocche
       const errors = err.errors?.map((e: any) => ({
         field: e.path.join("."),
-        message: e.message
+        message: e.message,
       })) || [{ message: err.message }];
       return ResponseUtils.error(res, "Query validation failed", 400, errors);
     }
@@ -68,9 +67,14 @@ export const validateParams = (schema: ZodSchema) => {
       // Bangla: error gulo format kore response pathano hocche
       const errors = err.errors?.map((e: any) => ({
         field: e.path.join("."),
-        message: e.message
+        message: e.message,
       })) || [{ message: err.message }];
-      return ResponseUtils.error(res, "Parameter validation failed", 400, errors);
+      return ResponseUtils.error(
+        res,
+        "Parameter validation failed",
+        400,
+        errors
+      );
     }
   };
 };

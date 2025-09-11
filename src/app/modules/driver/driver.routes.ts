@@ -1,58 +1,88 @@
-import { Router } from "express";
-import DriverController from "./driver.controller";
+
+import { Router, Request, Response, NextFunction } from "express";
 import { authenticate } from "../../middlewares/auth.middleware";
 import {
   authorize,
   requireApprovedDriver,
 } from "../../middlewares/role.middleware";
+import { validateBody } from "../../middlewares/validation.middleware";
 import {
-  validateBody,
-  validateParams,
-} from "../../middlewares/validation.middleware";
+  updateProfileValidation,
+  updateAvailabilityValidation,
+  updateLocationValidation,
+} from "./driver.validation";
+import { DriverController } from "./driver.controller";
 
-const router: Router = Router();
+// Custom Request type with user
 
-// সব রুটে Authentication লাগবে
+const router = Router();
+
+// Apply authentication middleware to all routes
 router.use(authenticate);
 
-// Driver profile routes
-
-// টাইপ সেফটি নিশ্চিত করতে কাস্টম হ্যান্ডলার
-router.get("/profile", authorize(["driver"]), (req, res, next) =>
-  DriverController.getProfile(req as any, res)
+// Profile routes
+router.get(
+  "/profile",
+  authorize(["driver"]),
+  (req: Request, res: Response, next: NextFunction) =>
+    DriverController.getProfile(req, res, next)
 );
-router.patch("/profile", authorize(["driver"]), (req, res, next) =>
-  DriverController.updateProfile(req as any, res)
-);
-
-// Driver availability & location
-
-router.patch("/availability", authorize(["driver"]), (req, res, next) =>
-  DriverController.updateAvailability(req as any, res)
-);
-router.patch("/location", authorize(["driver"]), (req, res, next) =>
-  DriverController.updateLocation(req as any, res)
+router.patch(
+  "/profile",
+  authorize(["driver"]),
+  validateBody(updateProfileValidation),
+  (req: Request, res: Response, next: NextFunction) =>
+    DriverController.updateProfile(req, res, next)
 );
 
-// Ride management for drivers
+// Availability & Location
+router.patch(
+  "/availability",
+  authorize(["driver"]),
+  validateBody(updateAvailabilityValidation),
+  (req: Request, res: Response, next: NextFunction) =>
+    DriverController.updateAvailability(req, res, next)
+);
+router.patch(
+  "/location",
+  authorize(["driver"]),
+  validateBody(updateLocationValidation),
+  (req: Request, res: Response, next: NextFunction) =>
+    DriverController.updateLocation(req, res, next)
+);
 
-router.get("/rides/pending", requireApprovedDriver, (req, res, next) =>
-  DriverController.getPendingRides(req as any, res)
+// Ride routes
+router.get(
+  "/rides/pending",
+  requireApprovedDriver,
+  (req: Request, res: Response, next: NextFunction) =>
+    DriverController.getPendingRides(req, res, next)
 );
-router.get("/rides/active", authorize(["driver"]), (req, res, next) =>
-  DriverController.getActiveRide(req as any, res)
+router.get(
+  "/rides/active",
+  authorize(["driver"]),
+  (req: Request, res: Response, next: NextFunction) =>
+    DriverController.getActiveRide(req, res, next)
 );
-router.get("/rides/history", authorize(["driver"]), (req, res, next) =>
-  DriverController.getRideHistory(req as any, res)
+router.get(
+  "/rides/history",
+  authorize(["driver"]),
+  (req: Request, res: Response, next: NextFunction) =>
+    DriverController.getRideHistory(req, res, next)
 );
 
-// Earnings
-
-router.get("/earnings", authorize(["driver"]), (req, res, next) =>
-  DriverController.getEarnings(req as any, res)
+// Earnings routes
+router.get(
+  "/earnings",
+  authorize(["driver"]),
+  (req: Request, res: Response, next: NextFunction) =>
+    DriverController.getEarnings(req, res, next)
 );
-router.get("/earnings/detailed", authorize(["driver"]), (req, res, next) =>
-  DriverController.getDetailedEarnings(req as any, res)
+router.get(
+  "/earnings/detailed",
+  authorize(["driver"]),
+  (req: Request, res: Response, next: NextFunction) =>
+    DriverController.getDetailedEarnings(req, res, next)
 );
 
 export const DriverRoutes = router;

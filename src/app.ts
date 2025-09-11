@@ -3,39 +3,38 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import rateLimit from "express-rate-limit";
-import { errorHandler, notFound } from "./app/middlewares/error.middleware";
 import apiRouter from "./app/routes";
+import { errorHandler, notFound } from "./app/middlewares/error.middleware";
 
 const app: Application = express();
 
-// Security middlewares
-app.use(helmet()); // Set security-related HTTP headers
-app.use(cors()); // Enable Cross-Origin Resource Sharing
+// -------------------- Security --------------------
+app.use(helmet()); // Secure HTTP headers
+app.use(cors({ origin: process.env.FRONTEND_URL, credentials: true })); // CORS
 
-// Rate limiting configuration
+// -------------------- Rate Limiting --------------------
 const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || "900000"), // Time window (default: 15 minutes)
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "100"), // Max requests per window (default: 100)
-  message: { error: "Too many requests from this IP, please try again later." },
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || "900000"), // 15 minutes
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "100"),
+  message: { error: "Too many requests from this IP, try again later." },
 });
-app.use("/api", limiter); // Apply rate limiter to all /api routes
+app.use("/api", limiter);
 
-// Logging (enabled only in development mode)
+// -------------------- Logging --------------------
 if (process.env.NODE_ENV === "development") {
-  app.use(morgan("dev")); // Log HTTP requests
+  app.use(morgan("dev"));
 }
 
-// Body parsers
-app.use(express.json({ limit: "10mb" })); // Parse JSON payloads (max size 10MB)
-app.use(express.urlencoded({ extended: true })); // Parse URL-encoded payloads
+// -------------------- Body Parsers --------------------
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true }));
 
-// Root route
-app.get("/", (req: Request, res: Response) => {
+// -------------------- Routes --------------------
+app.get("/", (_req: Request, res: Response) => {
   res.json({ message: "🚖 Ride Booking API root route working!" });
 });
 
-// Health check endpoint
-app.get("/health", (req: Request, res: Response) => {
+app.get("/health", (_req: Request, res: Response) => {
   res.status(200).json({
     success: true,
     message: "Ride Booking API is running successfully",
@@ -44,11 +43,10 @@ app.get("/health", (req: Request, res: Response) => {
   });
 });
 
-// API routes
 app.use("/api/v1", apiRouter);
 
-// Error handling middlewares
-app.use(notFound); // Handle 404 Not Found
-app.use(errorHandler); // Handle other errors
+// -------------------- Error Handling --------------------
+app.use(notFound); // 404 middleware
+app.use(errorHandler); // Global error handler
 
 export default app;

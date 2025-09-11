@@ -12,7 +12,10 @@ class PasswordUtils {
   /**
    * Compare password with hash
    */
-  static async comparePassword(password: string, hash: string): Promise<boolean> {
+  static async comparePassword(
+    password: string,
+    hash: string
+  ): Promise<boolean> {
     return await bcrypt.compare(password, hash);
   }
 }

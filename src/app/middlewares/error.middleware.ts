@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Request, Response, NextFunction } from "express";
 import ResponseUtils from "../utils/response";
 
@@ -11,14 +12,19 @@ export const notFound = (req: Request, res: Response, next: NextFunction) => {
 /**
  * Global error handler
  */
-export const errorHandler = (err: any, req: Request, res: Response, next: NextFunction) => {
+export const errorHandler = (
+  err: any,
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   console.error("Error:", err);
 
   // Mongoose validation error
   if (err.name === "ValidationError") {
     const errors = Object.values(err.errors).map((error: any) => ({
       field: error.path,
-      message: error.message
+      message: error.message,
     }));
     return ResponseUtils.error(res, "Validation failed", 400, errors);
   }
@@ -44,5 +50,9 @@ export const errorHandler = (err: any, req: Request, res: Response, next: NextFu
   }
 
   // Default server error
-  return ResponseUtils.error(res, err.message || "Internal Server Error", err.statusCode || 500);
+  return ResponseUtils.error(
+    res,
+    err.message || "Internal Server Error",
+    err.statusCode || 500
+  );
 };

@@ -7,18 +7,16 @@ import { authenticate } from "../../middlewares/auth.middleware";
 import registerSchema from "./schemas/register.schema";
 import loginSchema from "./schemas/login.schema";
 
-// রাউটার তৈরি করা হচ্ছে
 const router = Router();
 
-
-// ✅ পাবলিক রুট - অথেন্টিকেশন লাগবে না
+//  Public routes - No authentication required
 router.post("/register", validateBody(registerSchema), AuthController.register);
 router.post("/login", validateBody(loginSchema), AuthController.login);
 
-// ✅ প্রোটেক্টেড রুট - অথেন্টিকেশন লাগবে
+//  Protected routes - Authentication required
 router.post("/logout", authenticate, AuthController.logout);
 router.get("/me", authenticate, AuthController.getProfile);
 router.patch("/profile", authenticate, AuthController.updateProfile);
 
-// এক্সপোর্ট হচ্ছে শুধু AuthRoutes
+// Export only AuthRoutes
 export const AuthRoutes = router;
