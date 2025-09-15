@@ -10,9 +10,9 @@ interface IUserPayload {
 interface ITokenPair {
   accessToken: string;
   refreshToken: string;
-  // tokenType: string;
-  expiresIn: number; // in seconds
+  expiresIn: number;
 }
+
 
 const generateToken = (
   payload: Record<string, any>,
@@ -32,6 +32,7 @@ const verifyToken = (token: string, secret: string): Record<string, any> => {
   }
 };
 
+
 const verifyAccessToken = (token: string): Record<string, any> => {
   const secret = process.env.JWT_ACCESS_SECRET as string;
   if (!secret) throw new Error("JWT_ACCESS_SECRET is not defined in .env");
@@ -43,6 +44,7 @@ const verifyRefreshToken = (token: string): Record<string, any> => {
   if (!secret) throw new Error("JWT_REFRESH_SECRET is not defined in .env");
   return verifyToken(token, secret);
 };
+
 
 const generateTokenPair = (user: IUserPayload): ITokenPair => {
   const id = user._id ?? user.id;
@@ -83,7 +85,6 @@ const generateTokenPair = (user: IUserPayload): ITokenPair => {
   return {
     accessToken,
     refreshToken,
-    // tokenType: "Bearer",
     expiresIn,
   };
 };

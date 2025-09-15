@@ -106,13 +106,16 @@ src/
    # Development mode
    npm run dev
    
-   # Production mode
-   npm start
-   ```
+ 
 
-The API will be available at `http://localhost:5000`
+The API will be available at `https://assignment-ride-booking-api-1.onrender.com/`
 
 ## 📋 API Documentation
+
+### Live URL
+```
+https://assignment-ride-booking-api-1.onrender.com/api/v1
+```
 
 ### Base URL
 ```
@@ -165,7 +168,7 @@ Content-Type: application/json
 #### Request a Ride (Rider)
 ```http
 POST /rides/request
-Authorization: Bearer <token>
+Authorization:<token>
 Content-Type: application/json
 
 {
@@ -192,13 +195,13 @@ Content-Type: application/json
 #### Accept a Ride (Driver)
 ```http
 PATCH /rides/:rideId/accept
-Authorization: Bearer <token>
+Authorization:<token>
 ```
 
 #### Update Ride Status (Driver)
 ```http
 PATCH /rides/:rideId/status
-Authorization: Bearer <token>
+Authorization:<token>
 Content-Type: application/json
 
 {
@@ -211,7 +214,7 @@ Content-Type: application/json
 #### Update Availability
 ```http
 PATCH /drivers/availability
-Authorization: Bearer <token>
+Authorization:<token>
 Content-Type: application/json
 
 {
@@ -222,7 +225,7 @@ Content-Type: application/json
 #### Update Location
 ```http
 PATCH /drivers/location
-Authorization: Bearer <token>
+Authorization:<token>
 Content-Type: application/json
 
 {
@@ -236,7 +239,7 @@ Content-Type: application/json
 #### Approve Driver
 ```http
 PATCH /admin/drivers/:driverId/approve
-Authorization: Bearer <admin-token>
+Authorization:<admin-token>
 Content-Type: application/json
 
 {
@@ -247,7 +250,7 @@ Content-Type: application/json
 #### Block User
 ```http
 PATCH /admin/users/:userId/block
-Authorization: Bearer <admin-token>
+Authorization:<admin-token>
 Content-Type: application/json
 
 {

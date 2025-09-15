@@ -4,7 +4,7 @@ import User from "../modules/user/user.model";
 import ResponseUtils from "../utils/response";
 
 /**
- * Authenticate user using JWT token (no Bearer required)
+ * Authenticate user using JWT token 
  */
 export const authenticate = async (
   req: Request,
