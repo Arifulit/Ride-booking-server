@@ -145,6 +145,20 @@ rideSchema.statics.calculateFare = function (
   const rate = rates[rideType];
   return Math.round(rate.base + distance * rate.perKm);
 };
+// --- Add virtuals for populate ---
+rideSchema.virtual("driver", {
+  ref: "User",
+  localField: "driverId",
+  foreignField: "_id",
+  justOne: true,
+});
+
+rideSchema.virtual("driverProfile", {
+  ref: "Driver",
+  localField: "driverProfileId",
+  foreignField: "_id",
+  justOne: true,
+});
 
 export const Ride = model<IRideDocument, IRideModel>("Ride", rideSchema);
 export default Ride;

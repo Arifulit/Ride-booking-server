@@ -8,7 +8,7 @@ dotenv.config();
 const PORT = process.env.PORT ? Number(process.env.PORT) : 5000;
 const MONGO_URI = process.env.MONGODB_URI as string;
 
-// -------------------- Database Connection --------------------
+// Database Connection
 const connectDB = async () => {
   try {
     await mongoose.connect(MONGO_URI);
@@ -18,19 +18,21 @@ const connectDB = async () => {
   }
 };
 
-// -------------------- Start Server --------------------
+// Start Server
 const startServer = async () => {
   await connectDB();
 
   const server = app.listen(PORT, () => {
     console.log(
-      `Server running on port ${PORT} in ${process.env.NODE_ENV || "production"} mode`
+      `Server running on port ${PORT} in ${
+        process.env.NODE_ENV || "production"
+      } mode`
     );
     console.log(`API Base URL: http://localhost:${PORT}/api/v1`);
     console.log("✅ MongoDB Connected successfully");
   });
 
-  // -------------------- Handle Errors --------------------
+  // Handle Errors
   process.on("unhandledRejection", (err: any) => {
     console.error("Unhandled Promise Rejection:", err?.message || err);
     server.close(() => process.exit(1));

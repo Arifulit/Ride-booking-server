@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Request, Response, NextFunction } from "express";
 import ResponseUtils from "../utils/response";
 
@@ -6,7 +5,7 @@ import ResponseUtils from "../utils/response";
  * Handle 404 Not Found errors
  */
 export const notFound = (req: Request, res: Response, next: NextFunction) => {
-  return ResponseUtils.error(res, `Route ${req.originalUrl} not found`, 404);
+  ResponseUtils.error(res, `Route ${req.originalUrl} not found`, 404);
 };
 
 /**
@@ -26,31 +25,36 @@ export const errorHandler = (
       field: error.path,
       message: error.message,
     }));
-    return ResponseUtils.error(res, "Validation failed", 400, errors);
+    ResponseUtils.error(res, "Validation failed", 400, errors);
+    return;
   }
 
   // Mongoose duplicate key error
   if (err.code === 11000) {
     const field = Object.keys(err.keyValue)[0];
-    return ResponseUtils.error(res, `${field} already exists`, 409);
+    ResponseUtils.error(res, `${field} already exists`, 409);
+    return;
   }
 
   // Mongoose cast error
   if (err.name === "CastError") {
-    return ResponseUtils.error(res, "Invalid ID format", 400);
+    ResponseUtils.error(res, "Invalid ID format", 400);
+    return;
   }
 
   // JWT errors
   if (err.name === "JsonWebTokenError") {
-    return ResponseUtils.error(res, "Invalid token", 401);
+    ResponseUtils.error(res, "Invalid token", 401);
+    return;
   }
 
   if (err.name === "TokenExpiredError") {
-    return ResponseUtils.error(res, "Token expired", 401);
+    ResponseUtils.error(res, "Token expired", 401);
+    return;
   }
 
   // Default server error
-  return ResponseUtils.error(
+  ResponseUtils.error(
     res,
     err.message || "Internal Server Error",
     err.statusCode || 500

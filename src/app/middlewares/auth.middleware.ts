@@ -4,7 +4,7 @@ import User from "../modules/user/user.model";
 import ResponseUtils from "../utils/response";
 
 /**
- * Authenticate user using JWT token
+ * Authenticate user using JWT token (no Bearer required)
  */
 export const authenticate = async (
   req: Request,
@@ -12,17 +12,15 @@ export const authenticate = async (
   next: NextFunction
 ) => {
   try {
-    const authHeader = req.headers.authorization;
+    // Accept token directly in the Authorization header
+    const token = req.headers.authorization;
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    if (!token) {
       return ResponseUtils.error(res, "Access token required", 401);
     }
 
-    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-
     try {
       // Use JWTUtils.verifyAccessToken to verify token (uses .env secret)
-      // Make sure to send Authorization header as: Bearer <token>
       const decoded = JWTUtils.verifyAccessToken(token) as {
         id?: string;
         _id?: string;

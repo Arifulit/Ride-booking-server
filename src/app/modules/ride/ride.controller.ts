@@ -7,9 +7,9 @@ import ResponseUtils from "../../utils/response";
 import { catchAsync } from "../../utils/catchAsync";
 import { IRide } from "./ride.interface";
 
-// -----------------------------
+
 // Rider: Get My Rides
-// -----------------------------
+
 const getMyRides = catchAsync(async (req: Request, res: Response) => {
   const riderIdRaw = req.user?._id;
   if (!riderIdRaw || !mongoose.Types.ObjectId.isValid(String(riderIdRaw))) {
@@ -23,9 +23,9 @@ const getMyRides = catchAsync(async (req: Request, res: Response) => {
   ResponseUtils.success(res, { rides }, "My rides fetched successfully");
 });
 
-// -----------------------------
+
 // Rider: Cancel Ride
-// -----------------------------
+
 const cancelRide = catchAsync(async (req: Request, res: Response) => {
   const { rideId } = req.params;
   const ride = await Ride.findById(rideId);
@@ -39,9 +39,9 @@ const cancelRide = catchAsync(async (req: Request, res: Response) => {
   ResponseUtils.success(res, { ride }, "Ride cancelled successfully");
 });
 
-// -----------------------------
+
 // Rider: Rate Driver
-// -----------------------------
+
 const rateDriver = catchAsync(async (req: Request, res: Response) => {
   const { rideId } = req.params;
   const { rating } = req.body;
@@ -57,9 +57,9 @@ const rateDriver = catchAsync(async (req: Request, res: Response) => {
   ResponseUtils.success(res, { ride }, "Driver rated successfully");
 });
 
-// -----------------------------
+
 // Rider: Request Ride
-// -----------------------------
+
 const requestRide = catchAsync(async (req: Request, res: Response) => {
   const riderId = req.user?._id;
   if (!riderId) {
@@ -99,28 +99,9 @@ const requestRide = catchAsync(async (req: Request, res: Response) => {
   ResponseUtils.success(res, { ride }, "Ride requested successfully", 201);
 });
 
-// -----------------------------
+
 // Driver: Accept Ride
-// -----------------------------
-// const acceptRide = catchAsync(async (req: Request, res: Response) => {
-//   const { rideId } = req.params;
-//   const driverId = req.user?._id;
-//   if (!driverId || !mongoose.Types.ObjectId.isValid(String(driverId))) {
-//     ResponseUtils.error(res, "Invalid driver ID", 400);
-//     return;
-//   }
 
-//   const ride = await Ride.findOne({ _id: rideId, status: "requested" });
-//   if (!ride) {
-//     ResponseUtils.error(res, "Ride not found or already accepted", 404);
-//     return;
-//   }
-
-//   ride.driverId = driverId;
-//   ride.status = "accepted";
-//   await ride.save();
-//   ResponseUtils.success(res, { ride }, "Ride accepted successfully");
-// });
 
 
 const acceptRide = catchAsync(async (req: Request, res: Response) => {
@@ -157,9 +138,9 @@ const acceptRide = catchAsync(async (req: Request, res: Response) => {
 });
 
 
-// -----------------------------
+
 // Driver: Reject Ride
-// -----------------------------
+
 const rejectRide = catchAsync(async (req: Request, res: Response) => {
   const { rideId } = req.params;
   const ride = await Ride.findById(rideId);
@@ -173,9 +154,9 @@ const rejectRide = catchAsync(async (req: Request, res: Response) => {
   ResponseUtils.success(res, { ride }, "Ride rejected successfully");
 });
 
-// -----------------------------
+
 // Driver: Update Ride Status
-// -----------------------------
+
 const updateRideStatus = catchAsync(async (req: Request, res: Response) => {
   const { rideId } = req.params;
   const { status } = req.body;
@@ -191,9 +172,9 @@ const updateRideStatus = catchAsync(async (req: Request, res: Response) => {
   ResponseUtils.success(res, { ride }, "Ride status updated successfully");
 });
 
-// -----------------------------
+
 // Get Ride Details
-// -----------------------------
+
 const getRideDetails = catchAsync(async (req: Request, res: Response) => {
   const { rideId } = req.params;
   const ride = await Ride.findById(rideId);
@@ -205,9 +186,9 @@ const getRideDetails = catchAsync(async (req: Request, res: Response) => {
   ResponseUtils.success(res, { ride }, "Ride details fetched successfully");
 });
 
-// -----------------------------
+
 // Admin: Get All Rides
-// -----------------------------
+
 const getAllRidesHistory = catchAsync(async (req: Request, res: Response) => {
   const rides = await Ride.find().sort({ createdAt: -1 });
   ResponseUtils.success(
@@ -217,9 +198,9 @@ const getAllRidesHistory = catchAsync(async (req: Request, res: Response) => {
   );
 });
 
-// -----------------------------
+
 // Admin: Analytics
-// -----------------------------
+
 const getAdminAnalytics = catchAsync(async (req: Request, res: Response) => {
   const User = require("../user/user.model").default;
 
@@ -261,9 +242,9 @@ const getAdminAnalytics = catchAsync(async (req: Request, res: Response) => {
   );
 });
 
-// -----------------------------
+
 // Rider/Admin: Search Nearby Drivers
-// -----------------------------
+
 const searchNearbyDrivers = catchAsync(async (req: Request, res: Response) => {
   const { longitude, latitude, radius = 10 } = req.body;
   if (typeof longitude !== "number" || typeof latitude !== "number") {
@@ -278,6 +259,7 @@ const searchNearbyDrivers = catchAsync(async (req: Request, res: Response) => {
   );
   ResponseUtils.success(res, { drivers }, "Drivers fetched successfully");
 });
+
 
 export const RideController = {
   getMyRides,

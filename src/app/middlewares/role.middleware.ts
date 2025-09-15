@@ -13,19 +13,16 @@ interface AuthRequest extends Request {
  */
 export const authorize = (allowedRoles: string[]) => {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
-    try {
-      if (!req.user) {
-        return ResponseUtils.error(res, "Authentication required", 401);
-      }
-
-      if (!allowedRoles.includes(req.user.role)) {
-        return ResponseUtils.error(res, "Insufficient permissions", 403);
-      }
-      next();
-    } catch (error) {
-      console.error("Authorization middleware error:", error);
-      return ResponseUtils.error(res, "Authorization failed", 500);
+    if (!req.user) {
+      ResponseUtils.error(res, "Authentication required", 401);
+      return;
     }
+
+    if (!allowedRoles.includes(req.user.role)) {
+      ResponseUtils.error(res, "Insufficient permissions", 403);
+      return;
+    }
+    next();
   };
 };
 
@@ -39,22 +36,25 @@ export const requireApprovedDriver = async (
 ) => {
   try {
     if (!req.user || req.user.role !== "driver") {
-      return ResponseUtils.error(res, "Driver access required", 403);
+      ResponseUtils.error(res, "Driver access required", 403);
+      return;
     }
 
     const driver = await Driver.findOne({ userId: req.user._id });
     if (!driver) {
-      return ResponseUtils.error(res, "Driver profile not found", 404);
+      ResponseUtils.error(res, "Driver profile not found", 404);
+      return;
     }
 
     if (driver.approvalStatus !== "approved") {
-      return ResponseUtils.error(res, "Driver not approved yet", 403);
+      ResponseUtils.error(res, "Driver not approved yet", 403);
+      return;
     }
 
     req.driver = driver;
     next();
   } catch (error) {
     console.error("Driver authorization error:", error);
-    return ResponseUtils.error(res, "Driver authorization failed", 500);
+    ResponseUtils.error(res, "Driver authorization failed", 500);
   }
 };

@@ -11,7 +11,6 @@ interface ModuleRoute {
   path: string;
   route: Router;
 }
-
 const moduleRoutes: ModuleRoute[] = [
   {
     path: "/users",

@@ -10,9 +10,8 @@ import {
 
 const router = Router();
 
-// -----------------------------
 // Public & Rider/Admin routes
-// -----------------------------
+
 router.use(authenticate);
 
 router.post(
@@ -27,9 +26,9 @@ router.post(
   asyncHandler(RideController.requestRide)
 );
 
-// -----------------------------
+
 // Rider ride management
-// -----------------------------
+
 router.get(
   "/my-rides",
   authorize(["rider"]),
@@ -52,9 +51,9 @@ router.patch(
   asyncHandler(RideController.rateDriver)
 );
 
-// -----------------------------
+
 // Driver ride management
-// -----------------------------
+
 router.patch(
   "/:rideId/accept",
   requireApprovedDriver,
@@ -71,14 +70,13 @@ router.patch(
   asyncHandler(RideController.updateRideStatus)
 );
 
-// -----------------------------
+
 // Shared route
-// -----------------------------
+
 router.get("/:rideId", asyncHandler(RideController.getRideDetails));
 
-// -----------------------------
 // Admin routes
-// -----------------------------
+
 router.get(
   "/history/all",
   authorize(["admin"]),

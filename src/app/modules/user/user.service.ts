@@ -1,25 +1,30 @@
 import User from "./user.model";
 import { IUser } from "./user.interface";
 
-class UserService {
-  static async findById(id: string) {
-    return User.findById(id);
-  }
+const findById = async (id: string) => {
+  return User.findById(id);
+};
 
-  static async findAll(projection = "-password") {
-    return User.find().select(projection);
-  }
+const findAll = async (projection = "-password") => {
+  return User.find().select(projection);
+};
 
-  static async updateById(id: string, updates: Partial<IUser>) {
-    return User.findByIdAndUpdate(id, updates, {
-      new: true,
-      runValidators: true,
-    });
-  }
+const updateById = async (id: string, updates: Partial<IUser>) => {
+  return User.findByIdAndUpdate(id, updates, {
+    new: true,
+    runValidators: true,
+  });
+};
 
-  static async create(payload: Partial<IUser>) {
-    return User.create(payload);
-  }
-}
+const create = async (payload: Partial<IUser>) => {
+  return User.create(payload);
+};
+
+const UserService = {
+  findById,
+  findAll,
+  updateById,
+  create,
+};
 
 export default UserService;

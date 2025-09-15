@@ -8,11 +8,11 @@ import { errorHandler, notFound } from "./app/middlewares/error.middleware";
 
 const app: Application = express();
 
-// -------------------- Security --------------------
+// Security
 app.use(helmet()); // Secure HTTP headers
 app.use(cors({ origin: process.env.FRONTEND_URL, credentials: true })); // CORS
 
-// -------------------- Rate Limiting --------------------
+// Rate Limiting
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || "900000"), // 15 minutes
   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "100"),
@@ -20,16 +20,16 @@ const limiter = rateLimit({
 });
 app.use("/api", limiter);
 
-// -------------------- Logging --------------------
+// Logging
 if (process.env.NODE_ENV === "development") {
   app.use(morgan("dev"));
 }
 
-// -------------------- Body Parsers --------------------
+// Body Parsers
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-// -------------------- Routes --------------------
+// Routes
 app.get("/", (_req: Request, res: Response) => {
   res.json({ message: "🚖 Ride Booking API root route working!" });
 });
@@ -45,7 +45,7 @@ app.get("/health", (_req: Request, res: Response) => {
 
 app.use("/api/v1", apiRouter);
 
-// -------------------- Error Handling --------------------
+// Error Handling
 app.use(notFound); // 404 middleware
 app.use(errorHandler); // Global error handler
 
