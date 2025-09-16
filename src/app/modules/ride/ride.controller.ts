@@ -44,18 +44,21 @@ const cancelRide = catchAsync(async (req: Request, res: Response) => {
 
 const rateDriver = catchAsync(async (req: Request, res: Response) => {
   const { rideId } = req.params;
-  const { rating } = req.body;
+  const { riderRating, riderComment } = req.body;
 
   const ride = await Ride.findById(rideId);
   if (!ride) {
-    ResponseUtils.error(res, "Ride not found", 404);
-    return;
+    return ResponseUtils.error(res, "Ride not found", 404);
   }
 
-  (ride.rating ??= {}).driverRating = rating;
+  (ride.rating ??= {}).riderRating = riderRating; 
+  (ride.feedback ??= {}).riderComment = riderComment;
+
   await ride.save();
+
   ResponseUtils.success(res, { ride }, "Driver rated successfully");
 });
+
 
 
 // Rider: Request Ride
