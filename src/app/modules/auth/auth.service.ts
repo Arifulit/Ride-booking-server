@@ -1,4 +1,3 @@
-// import { DecodedTokenPayload } from "./types";
 import JWTUtils from "../../utils/jwt";
 
 interface User {
@@ -13,34 +12,6 @@ interface TokenPair {
   accessToken: string;
   refreshToken: string;
   expiresIn?: number;
-  tokenType?: string;
-}
-
-interface DecodedToken {
-  userId?: string | number;
-  id?: string | number;
-  email?: string;
-  role?: string;
-  iat?: number;
-  exp?: number;
-  [key: string]: any;
-}
-
-class AuthService {
-  /**
-   * Generate authentication tokens
-   */
-  static generateTokens(user: User): TokenPair {
-    return JWTUtils.generateTokenPair({
-      _id: user._id ?? user.id,
-      email: user.email,
-      role: user.role,
-    });
-  }
-
-  /**
-   * Verify authentication token
-   */
 }
 
 export interface DecodedTokenPayload {
@@ -53,5 +24,20 @@ export interface DecodedTokenPayload {
   exp?: number;
   [key: string]: any;
 }
+
+/**
+ * Generate authentication tokens
+ */
+const generateTokens = (user: User): TokenPair => {
+  return JWTUtils.generateTokenPair({
+    _id: user._id ?? user.id,
+    email: user.email,
+    role: user.role,
+  });
+};
+
+const AuthService = {
+  generateTokens,
+};
 
 export default AuthService;

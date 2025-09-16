@@ -19,6 +19,4 @@ export type LoginInput = z.infer<typeof loginSchema>;
 
 // Export the schema as default
 export default loginSchema;
-
-// Named export for convenience
 export { loginSchema };

@@ -108,28 +108,23 @@ const acceptRide = catchAsync(async (req: Request, res: Response) => {
   const { rideId } = req.params;
   const driverId = req.user?._id;
 
-  // Validate driverId
   if (!driverId || !mongoose.Types.ObjectId.isValid(String(driverId))) {
     return ResponseUtils.error(res, "Invalid driver ID", 400);
   }
 
-  // Validate rideId
   if (!rideId || !mongoose.Types.ObjectId.isValid(rideId)) {
     return ResponseUtils.error(res, "Invalid ride ID", 400);
   }
 
-  // Find the ride
   const ride: IRide | null = await Ride.findById(rideId);
   if (!ride) {
     return ResponseUtils.error(res, "Ride not found", 404);
   }
-
   // Check if ride is already accepted or not in "requested" status
   if (ride.status !== "requested") {
     return ResponseUtils.error(res, `Cannot accept ride. Current status: ${ride.status}`, 400);
   }
 
-  // Accept the ride
   ride.driverId = driverId;
   ride.status = "accepted";
   await ride.save();
@@ -148,7 +143,6 @@ const rejectRide = catchAsync(async (req: Request, res: Response) => {
     ResponseUtils.error(res, "Ride not found", 404);
     return;
   }
-
   ride.status = "rejected";
   await ride.save();
   ResponseUtils.success(res, { ride }, "Ride rejected successfully");

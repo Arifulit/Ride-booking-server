@@ -171,6 +171,7 @@ function getStringParam(param: unknown, defaultValue: string = ""): string {
   return defaultValue;
 }
 
+// Get all drivers
 const getAllDrivers = catchAsync(async (req: Request, res: Response) => {
   const page = getStringParam(req.query.page, "1");
   const limit = getStringParam(req.query.limit, "10");

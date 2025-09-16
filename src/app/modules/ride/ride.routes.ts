@@ -11,7 +11,6 @@ import {
 const router = Router();
 
 // Public & Rider/Admin routes
-
 router.use(authenticate);
 
 router.post(
