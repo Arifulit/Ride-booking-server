@@ -105,35 +105,46 @@ const requestRide = catchAsync(async (req: Request, res: Response) => {
 
 // Driver: Accept Ride
 
-
-
 const acceptRide = catchAsync(async (req: Request, res: Response) => {
   const { rideId } = req.params;
-  const driverId = req.user?._id;
+  const driverIdRaw = req.user?._id;
 
-  if (!driverId || !mongoose.Types.ObjectId.isValid(String(driverId))) {
-    return ResponseUtils.error(res, "Invalid driver ID", 400);
+  // Validate driverId and rideId
+  if (!driverIdRaw) {
+    return ResponseUtils.error(res, "Driver not authenticated", 401);
   }
+  const driverId =
+    mongoose.Types.ObjectId.isValid(driverIdRaw)
+      ? new mongoose.Types.ObjectId(driverIdRaw)
+      : driverIdRaw;
 
   if (!rideId || !mongoose.Types.ObjectId.isValid(rideId)) {
     return ResponseUtils.error(res, "Invalid ride ID", 400);
   }
 
-  const ride: IRide | null = await Ride.findById(rideId);
+  // Find ride
+  const ride = await Ride.findById(rideId);
   if (!ride) {
     return ResponseUtils.error(res, "Ride not found", 404);
   }
-  // Check if ride is already accepted or not in "requested" status
+
+  // Check ride status
   if (ride.status !== "requested") {
-    return ResponseUtils.error(res, `Cannot accept ride. Current status: ${ride.status}`, 400);
+    return ResponseUtils.error(
+      res,
+      `Cannot accept ride. Current status: ${ride.status}`,
+      400
+    );
   }
 
+  // Assign driver and update status
   ride.driverId = driverId;
   ride.status = "accepted";
   await ride.save();
 
   return ResponseUtils.success(res, { ride }, "Ride accepted successfully");
 });
+
 
 
 

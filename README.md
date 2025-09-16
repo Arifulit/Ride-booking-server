@@ -2,6 +2,12 @@
 
 A secure, scalable, and role-based backend API for a ride booking system similar to Uber/Pathao, built with Express.js and MongoDB.
 
+##  Demo Video
+
+[![Watch the video](https://img.youtube.com/vi/3fumBcKC6RE/0.jpg)](https://drive.google.com/file/d/1cRPbWJx8aw_4RI1IWcWiRZt-EaUHe4dz/view?usp=share_link)
+
+---
+
 ## 🚀 Features
 
 ### Authentication & Authorization
@@ -108,7 +114,7 @@ src/
    
  
 
-The API will be available at `https://assignment-ride-booking-api-1.onrender.com/`
+The API will be available at `https://assignment-ride-booking-api-1.onrender.com`
 
 ## 📋 API Documentation
 

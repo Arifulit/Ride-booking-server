@@ -14,6 +14,7 @@ export interface IRideModel extends Model<IRideDocument> {
   calculateFare(distance: number, rideType?: RideType): number;
 }
 
+
 const rideSchema = new Schema<IRideDocument>(
   {
     riderId: { type: Schema.Types.ObjectId, ref: "User", required: true },
