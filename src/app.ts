@@ -10,7 +10,12 @@ const app: Application = express();
 
 // Security
 app.use(helmet()); // Secure HTTP headers
-app.use(cors({ origin: process.env.FRONTEND_URL, credentials: true })); // CORS
+
+// CORS: allow frontend URL or all in development
+app.use(cors({
+  origin: process.env.FRONTEND_URL || "http://localhost:5173", // fallback for dev
+  credentials: true,
+}));
 
 // Rate Limiting
 const limiter = rateLimit({

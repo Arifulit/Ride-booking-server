@@ -10,6 +10,7 @@ import Ride from "../ride/ride.model";
 import { IRide } from "../ride/ride.interface";
 import ResponseUtils from "../../utils/response";
 import type { ParsedQs } from "qs";
+
 import {
   AdminRegisterBody,
   BlockUserBody,
@@ -19,36 +20,6 @@ import {
 } from "./admin.interface";
 import { catchAsync } from "../../utils/catchAsync";
 
-/** Admin registration */
-const adminRegister = catchAsync(
-  async (req: Request<{}, {}, AdminRegisterBody>, res: Response) => {
-    const { firstName, lastName, email, password, phone } = req.body;
-
-    const existing: IUser | null = await User.findOne({ email });
-    if (existing) {
-      ResponseUtils.error(res, "Email already registered", 409);
-      return;
-    }
-
-    const admin = new User({
-      firstName,
-      lastName,
-      email,
-      password,
-      phone,
-      role: "admin",
-    });
-    await admin.save();
-
-    const publicProfile = admin.getPublicProfile();
-    ResponseUtils.success(
-      res,
-      publicProfile,
-      "Admin registered successfully",
-      201
-    );
-  }
-);
 
 /** Get all users with pagination */
 function getRoleString(
@@ -485,7 +456,7 @@ const getEarningsReport = catchAsync(async (req: Request, res: Response) => {
 });
 
 export const AdminController = {
-  adminRegister,
+  
   getAllUsers,
   blockUser,
   unblockUser,

@@ -1,5 +1,5 @@
 
-import { Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import mongoose from "mongoose";
 import Ride from "./ride.model";
 import RideService from "./ride.service";
@@ -269,6 +269,130 @@ const searchNearbyDrivers = catchAsync(async (req: Request, res: Response) => {
 });
 
 
+
+// GET /rides/requests  (for drivers)
+const getAllRideRequests = catchAsync(async (req: Request, res: Response) => {
+  const driver = (req as any).user;
+  if (!driver || !driver._id) {
+    ResponseUtils.error(res, "Driver not authenticated", 401);
+    return;
+  }
+
+  const {
+    page = "1",
+    limit = "20",
+    status,      // optional: filter by status
+    unassigned,  // optional: "true" => only driverId == null
+    from,
+    to,
+    lat,
+    lng,
+    radiusKm = "5000",
+  } = req.query as Record<string, string | undefined>;
+
+  const pageNum = Math.max(parseInt(String(page), 10) || 1, 1);
+  const limitNum = Math.max(parseInt(String(limit), 10) || 20, 1);
+  const skip = (pageNum - 1) * limitNum;
+
+  const filter: Record<string, any> = {};
+
+  // By default show recent request statuses
+  if (status) {
+    filter.status = status;
+  } else {
+    filter.status = { $in: ["requested", "pending"] };
+  }
+
+  // if unassigned=true then show only rides without driver
+  if (unassigned === "true") {
+    filter.driverId = null;
+  } else {
+    // otherwise show rides assigned to this driver OR unassigned (optional)
+    // to show both unassigned and assigned to this driver, comment out next line
+    // filter.driverId = driver._id;
+    // we'll show both: assigned to this driver OR unassigned
+    filter.$or = [{ driverId: driver._id }, { driverId: null }];
+  }
+
+  // date range filter
+  if (from || to) {
+    filter.createdAt = {};
+    if (from) filter.createdAt.$gte = new Date(from);
+    if (to) filter.createdAt.$lte = new Date(to);
+  }
+
+  // optional geo filter on pickupLocation (if present in your schema as GeoJSON Point)
+  if (lat && lng) {
+    const maxDistance = Number(radiusKm) || 5000;
+    filter.pickupLocation = {
+      $near: {
+        $geometry: {
+          type: "Point",
+          coordinates: [Number(lng), Number(lat)],
+        },
+        $maxDistance: maxDistance,
+      },
+    };
+  }
+
+  const [totalDocs, items] = await Promise.all([
+    Ride.countDocuments(filter),
+    Ride.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum)
+      .populate({ path: "riderId", select: "firstName lastName phone email" })
+      .populate({ path: "driverId", select: "firstName lastName phone" })
+      .populate({ path: "driverProfileId", select: "vehicle vehicleNumber vehicleType" })
+      .lean(),
+  ]);
+
+  const totalPages = Math.max(1, Math.ceil(totalDocs / limitNum));
+  const meta = {
+    currentPage: pageNum,
+    totalPages,
+    totalRequests: totalDocs,
+    hasNext: pageNum < totalPages,
+    hasPrev: pageNum > 1,
+  };
+
+  // Use ResponseUtils.paginated (do not return the response object)
+  if (ResponseUtils.paginated) {
+    ResponseUtils.paginated(res, items, meta, "Ride requests fetched");
+    return;
+  }
+
+  res.status(200).json({
+    success: true,
+    message: "Ride requests fetched",
+    data: { items, ...meta },
+    errors: null,
+    timestamp: new Date().toISOString(),
+  });
+});
+
+const getPendingRides = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // Find all rides requested by riders (not yet accepted)
+      const pendingRides = await Ride.find({
+        status: "requested",
+        driverId: null,
+      })
+        .populate("riderId", "firstName lastName email phone profilePicture")
+        .sort({ createdAt: -1 });
+
+      res.status(200).json({
+        success: true,
+        message: "Pending rider requests fetched successfully",
+        count: pendingRides.length,
+        data: pendingRides,
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+
 export const RideController = {
   getMyRides,
   cancelRide,
@@ -281,4 +405,6 @@ export const RideController = {
   getAllRidesHistory,
   getAdminAnalytics,
   searchNearbyDrivers,
+  getAllRideRequests,
+  getPendingRides
 };

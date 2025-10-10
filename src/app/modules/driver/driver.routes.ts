@@ -1,4 +1,3 @@
-
 import { Router, Request, Response, NextFunction } from "express";
 import { authenticate } from "../../middlewares/auth.middleware";
 import {
@@ -83,6 +82,12 @@ router.get(
   authorize(["driver"]),
   (req: Request, res: Response, next: NextFunction) =>
     DriverController.getDetailedEarnings(req, res, next)
+);
+router.get(
+  "/riders",
+  authorize(["driver"]),
+  (req: Request, res: Response, next: NextFunction) =>
+    DriverController.getRidersList(req, res, next)
 );
 
 export const DriverRoutes = router;

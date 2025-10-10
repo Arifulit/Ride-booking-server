@@ -39,11 +39,9 @@ const registerSchema = z
       .string()
       .min(6, { message: "Password must be at least 6 characters" })
       .max(128, { message: "Password cannot exceed 128 characters" }),
-    phone: z
-      .string()
-      .regex(/^[\+]?[1-9][\d]{0,15}$/, {
-        message: "Please enter a valid phone number",
-      }),
+    phone: z.string().regex(/^[\+]?[0-9]{10,16}$/, {
+      message: "Please enter a valid phone number",
+    }),
     role: UserRole.default("rider"),
     licenseNumber: z.string().optional(),
     vehicleInfo: vehicleInfoSchema.optional(),

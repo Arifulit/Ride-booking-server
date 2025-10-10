@@ -4,6 +4,8 @@ import { AuthRoutes } from "../modules/auth/auth.routes";
 import { DriverRoutes } from "../modules/driver/driver.routes";
 import { RideRoutes } from "../modules/ride/ride.routes";
 import { AdminRoutes } from "../modules/admin/admin.routes";
+import { OtpRoutes } from "../modules/otp/otp.route";
+// import { OtpRoutes } from "../modules/otp/otp.routes";
 
 export const router: Router = Router();
 
@@ -32,6 +34,7 @@ const moduleRoutes: ModuleRoute[] = [
     path: "/admin",
     route: AdminRoutes,
   },
+  { path: "/otp", route: OtpRoutes },
 ];
 
 moduleRoutes.forEach((route: ModuleRoute) => {

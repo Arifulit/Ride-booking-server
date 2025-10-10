@@ -1,5 +1,5 @@
 
-import { Router } from "express";
+import { NextFunction, Router, Request, Response } from "express";
 import asyncHandler from "express-async-handler";
 import { RideController } from "./ride.controller";
 import { authenticate } from "../../middlewares/auth.middleware";
@@ -7,6 +7,7 @@ import {
   authorize,
   requireApprovedDriver,
 } from "../../middlewares/role.middleware";
+import { DriverController } from "../driver/driver.controller";
 
 const router = Router();
 
@@ -86,5 +87,15 @@ router.get(
   authorize(["admin"]),
   asyncHandler(RideController.getAdminAnalytics)
 );
+router.get(
+  "/driver/rides/pending",
+  authenticate,
+  requireApprovedDriver,
+  (req: Request, res: Response, next: NextFunction) =>
+    DriverController.getPendingRides(req, res, next)
+);
+
+// NEW: drivers can fetch requests (assigned to them OR unassigned)
+router.get("/requests", requireApprovedDriver, asyncHandler(RideController.getAllRideRequests));
 
 export const RideRoutes = router;

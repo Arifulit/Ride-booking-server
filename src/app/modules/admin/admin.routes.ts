@@ -7,7 +7,7 @@ import { AdminController } from "./admin.controller";
 const router = Router();
 
 // Admin registration (public)
-router.post("/register", AdminController.adminRegister);
+// router.post("/register", AdminController.adminRegister);
 
 // Auth + admin role for all following routes
 router.use(authenticate);

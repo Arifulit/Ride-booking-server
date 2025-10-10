@@ -1,7 +1,7 @@
-
 import mongoose, { Schema, Model } from "mongoose";
 import PasswordUtils from "../../utils/bcrypt";
 import { IUser } from "./user.interface";
+import { IsActive } from "./user.interface";
 
 const userSchema = new Schema<IUser>(
   {
@@ -15,17 +15,35 @@ const userSchema = new Schema<IUser>(
       trim: true,
       index: true,
     },
-    password: { type: String, required: true, minlength: 6 },
+    password: { type: String, required: true, minlength: 6, select: false }, // <-- Important change
     phone: { type: String, default: null, trim: true },
     role: {
       type: String,
       enum: ["admin", "rider", "driver"],
       default: "rider",
-    },
+    } as any,
     profilePicture: { type: String, default: null },
     isBlocked: { type: Boolean, default: false },
     lastLogin: { type: Date, default: null },
     emailVerified: { type: Boolean, default: false },
+    isActive: {
+  type: String,
+  enum: Object.values(IsActive),
+  default: IsActive.ACTIVE,
+},
+    auths: [
+      {
+        provider: {
+          type: String,
+          enum: ["credentials", "google", "facebook"],
+          required: true
+        },
+        providerId: {
+          type: String,
+          required: true
+        }
+      }
+    ]
   },
   {
     timestamps: true,
@@ -65,4 +83,5 @@ userSchema.methods.getPublicProfile = function (this: IUser) {
 };
 
 const User: Model<IUser> = mongoose.model<IUser>("User", userSchema);
+export { User };
 export default User;

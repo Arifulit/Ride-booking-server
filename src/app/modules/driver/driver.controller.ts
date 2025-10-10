@@ -5,6 +5,8 @@ import { IDriver } from "./driver.interface";
 import Ride from "../ride/ride.model";
 import ResponseUtils from "../../utils/response";
 import { catchAsync } from "../../utils/catchAsync";
+import User from "../user/user.model";
+import type { IUser } from "../user/user.interface";
 
 /**
  * Get driver profile
@@ -319,6 +321,62 @@ const getDetailedEarnings = catchAsync(async (req: Request, res: Response) => {
   }
 });
 
+const getRidersList = catchAsync(async (req: Request, res: Response) => {
+  const { page = "1", limit = "20", q } = req.query as Record<string, string | undefined>;
+  const pageNum = Math.max(parseInt(String(page), 10) || 1, 1);
+  const limitNum = Math.max(parseInt(String(limit), 10) || 20, 1);
+  const skip = (pageNum - 1) * limitNum;
+
+  const filter: Record<string, any> = { role: "rider", isBlocked: { $ne: true } };
+
+  if (q) {
+    const regex = new RegExp(String(q), "i");
+    filter.$or = [
+      { firstName: regex },
+      { lastName: regex },
+      { email: regex },
+      { phone: regex },
+    ];
+  }
+
+  const [total, items] = await Promise.all([
+    User.countDocuments(filter),
+    User.find(filter)
+      .select("-password -auths")
+       .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum)
+      .lean(),
+  ]);
+
+  const totalPages = Math.max(1, Math.ceil(total / limitNum));
+  const meta = {
+    currentPage: pageNum,
+    totalPages,
+    totalRiders: total,
+    hasNext: pageNum < totalPages,
+    hasPrev: pageNum > 1,
+  };
+
+  if (ResponseUtils.paginated) {
+    ResponseUtils.paginated(res, items, meta, "Riders fetched");
+    return;
+  }
+
+  res.status(200).json({
+    success: true,
+    message: "Riders fetched",
+    data: { items, ...meta },
+     errors: null,
+    timestamp: new Date().toISOString(),
+  });
+});
+
+
+
+
+
+
 export const DriverController = {
   getProfile,
   updateProfile,
@@ -329,4 +387,6 @@ export const DriverController = {
   getRideHistory,
   getEarnings,
   getDetailedEarnings,
+  getRidersList,
+ 
 };

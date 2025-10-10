@@ -60,17 +60,17 @@ const generateTokenPair = (user: IUserPayload): ITokenPair => {
   const accessToken = generateToken(
     payload,
     accessSecret,
-    process.env.JWT_ACCESS_EXPIRES_IN || "1d"
+    process.env.JWT_ACCESS_EXPIRES || "1d"
   );
 
   const refreshToken = generateToken(
     payload,
     refreshSecret,
-    process.env.JWT_REFRESH_EXPIRES_IN || "30d"
+    process.env.JWT_REFRESH_EXPIRES || "30d"
   );
 
   let expiresIn = 86400; // default 1 day
-  const accessExpiry = process.env.JWT_ACCESS_EXPIRES_IN || "1d";
+  const accessExpiry = process.env.JWT_ACCESS_EXPIRES || "1d";
 
   if (/^\d+$/.test(accessExpiry)) {
     expiresIn = parseInt(accessExpiry, 10);
