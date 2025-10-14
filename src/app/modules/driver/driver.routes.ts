@@ -11,6 +11,7 @@ import {
   updateLocationValidation,
 } from "./driver.validation";
 import { DriverController } from "./driver.controller";
+import { RideController } from "../ride/ride.controller";
 
 // Custom Request type with user
 
@@ -56,6 +57,13 @@ router.get(
   requireApprovedDriver,
   (req: Request, res: Response, next: NextFunction) =>
     DriverController.getPendingRides(req, res, next)
+);
+// Allow drivers to fetch assigned or unassigned ride requests (same handler as ride module)
+router.get(
+  "/rides/requests",
+  requireApprovedDriver,
+  (req: Request, res: Response, next: NextFunction) =>
+    RideController.getAllRideRequests(req, res, next)
 );
 router.get(
   "/rides/active",

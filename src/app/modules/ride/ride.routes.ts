@@ -20,6 +20,7 @@ router.post(
   asyncHandler(RideController.searchNearbyDrivers)
 );
 router.post("/estimate", asyncHandler(RideController.requestRide)); // fare estimate
+
 router.post(
   "/request",
   authorize(["rider"]),

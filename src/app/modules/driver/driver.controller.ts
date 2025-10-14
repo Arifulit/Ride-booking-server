@@ -18,7 +18,7 @@ const getProfile = catchAsync(async (req: Request, res: Response) => {
     }).populate("userId", "-password");
 
     if (!driver) {
-      ResponseUtils.error(res, "Driver profile not found", 404);
+      ResponseUtils.error(res, "Driver profile not found 1", 404);
       return;
     }
 
@@ -54,7 +54,7 @@ const updateProfile = catchAsync(async (req: Request, res: Response) => {
     ).populate("userId", "-password");
 
     if (!driver) {
-      ResponseUtils.error(res, "Driver profile not found", 404);
+      ResponseUtils.error(res, "Driver profile not found 2", 404);
       return;
     }
 
@@ -87,7 +87,7 @@ const updateAvailability = catchAsync(async (req: Request, res: Response) => {
     );
 
     if (!driver) {
-      ResponseUtils.error(res, "Driver profile not found", 404);
+      ResponseUtils.error(res, "Driver profile not found 3", 404);
       return;
     }
 
@@ -116,7 +116,7 @@ const updateLocation = catchAsync(async (req: Request, res: Response) => {
 
     const driver = await Driver.findOne({ userId: (req as any).user._id });
     if (!driver) {
-      ResponseUtils.error(res, "Driver profile not found", 404);
+      ResponseUtils.error(res, "Driver profile not found 4", 404);
       return;
     }
 
@@ -247,7 +247,7 @@ const getEarnings = catchAsync(async (req: Request, res: Response) => {
   try {
     const driver = await Driver.findOne({ userId: (req as any).user._id });
     if (!driver) {
-      ResponseUtils.error(res, "Driver profile not found", 404);
+      ResponseUtils.error(res, "Driver profile not found 5", 404);
       return;
     }
 

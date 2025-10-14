@@ -34,6 +34,47 @@ if (process.env.NODE_ENV === "development") {
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
+// Handle malformed JSON body errors from express.json
+app.use((err: any, req: Request, res: Response, next: any) => {
+  // If body parser failed due to empty JSON input (common when a client sets
+  // Content-Type: application/json but sends no body), allow safe methods to
+  // continue with an empty body instead of returning a 400. This prevents
+  // clients from receiving an empty/non-JSON response that causes
+  // `Unexpected end of JSON input` on the client side.
+  const isEntityParseFailed = err && err.type === "entity.parse.failed";
+  const isSyntaxError = err instanceof SyntaxError && "body" in err;
+
+  const isEmptyBodyError = (err && typeof err.message === "string" && /Unexpected end of JSON input/i.test(err.message));
+  const safeMethods = ["GET", "HEAD", "DELETE"];
+
+  if ((isEntityParseFailed || isSyntaxError) && isEmptyBodyError && safeMethods.includes(req.method)) {
+    // treat as empty body and continue
+    (req as any).body = {};
+    return next();
+  }
+
+  if (isEntityParseFailed) {
+    // body-parser style error
+    return res.status(400).json({
+      success: false,
+      message: "Malformed JSON body",
+      errors: err.message,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  if (isSyntaxError) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid JSON payload",
+      errors: err.message,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  next(err);
+});
+
 // Routes
 app.get("/", (_req: Request, res: Response) => {
   res.json({ message: "🚖 Ride Booking API root route working!" });

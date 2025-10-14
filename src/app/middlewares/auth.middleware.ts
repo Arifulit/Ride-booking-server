@@ -12,8 +12,11 @@ export const authenticate = async (
   next: NextFunction
 ) => {
   try {
-    // Accept token directly in the Authorization header
-    const token = req.headers.authorization;
+    // Accept token in multiple common forms: "Authorization: Bearer <token>", raw token in Authorization, or x-access-token header
+    let token = (req.headers.authorization as string) || (req.headers["x-access-token"] as string);
+    if (token && token.toLowerCase().startsWith("bearer ")) {
+      token = token.slice(7).trim();
+    }
 
     if (!token) {
       return ResponseUtils.error(res, "Access token required", 401);

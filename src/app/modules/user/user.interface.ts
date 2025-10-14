@@ -4,7 +4,7 @@ export enum Role {
     ADMIN = "admin",
     RIDER = "rider", 
     DRIVER = "driver",
-    USER = "USER",
+    USER = "user",
    
 }
 
@@ -35,9 +35,10 @@ export interface IUser extends Document {
     updatedAt?: Date;
     isVerified?: boolean; 
   // isActive?: boolean;  
-  isDeleted?: boolean
+    isDeleted?: boolean
 
-  isActive?: boolean;
+    // Use the IsActive enum string values in the schema and model
+    isActive?: IsActive;
     // Virtual field
     fullName: string;
     

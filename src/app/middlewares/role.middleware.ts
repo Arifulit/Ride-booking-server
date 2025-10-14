@@ -40,9 +40,10 @@ export const requireApprovedDriver = async (
       return;
     }
 
-    const driver = await Driver.findOne({ userId: req.user._id });
+    const driver = await Driver.findOne({ userId: req.user.id });
+    console.log("Request: ", req.user);
     if (!driver) {
-      ResponseUtils.error(res, "Driver profile not found", 404);
+      ResponseUtils.error(res, "Driver profile not found MIDD", 404);
       return;
     }
 

@@ -5,7 +5,6 @@ import { DriverRoutes } from "../modules/driver/driver.routes";
 import { RideRoutes } from "../modules/ride/ride.routes";
 import { AdminRoutes } from "../modules/admin/admin.routes";
 import { OtpRoutes } from "../modules/otp/otp.route";
-// import { OtpRoutes } from "../modules/otp/otp.routes";
 
 export const router: Router = Router();
 
@@ -24,6 +23,11 @@ const moduleRoutes: ModuleRoute[] = [
   },
   {
     path: "/drivers",
+    route: DriverRoutes,
+  },
+  // support singular '/driver' prefix for driver clients
+  {
+    path: "/driver",
     route: DriverRoutes,
   },
   {

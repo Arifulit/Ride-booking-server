@@ -5,7 +5,7 @@ import Ride from "./ride.model";
 import RideService from "./ride.service";
 import ResponseUtils from "../../utils/response";
 import { catchAsync } from "../../utils/catchAsync";
-import { IRide } from "./ride.interface";
+// ...existing code...
 
 
 // Rider: Get My Rides
@@ -282,6 +282,7 @@ const getAllRideRequests = catchAsync(async (req: Request, res: Response) => {
     page = "1",
     limit = "20",
     status,      // optional: filter by status
+    showAll,    // optional: show all statuses when true
     unassigned,  // optional: "true" => only driverId == null
     from,
     to,
@@ -296,9 +297,11 @@ const getAllRideRequests = catchAsync(async (req: Request, res: Response) => {
 
   const filter: Record<string, any> = {};
 
-  // By default show recent request statuses
-  if (status) {
+  // By default show recent request statuses. If status=all or showAll=true, do not filter by status
+  if (status && status !== "all") {
     filter.status = status;
+  } else if (showAll === "true" || status === "all") {
+    // no status filter -> return all statuses
   } else {
     filter.status = { $in: ["requested", "pending"] };
   }
@@ -341,9 +344,22 @@ const getAllRideRequests = catchAsync(async (req: Request, res: Response) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limitNum)
-      .populate({ path: "riderId", select: "firstName lastName phone email" })
-      .populate({ path: "driverId", select: "firstName lastName phone" })
-      .populate({ path: "driverProfileId", select: "vehicle vehicleNumber vehicleType" })
+      // populate rider with most non-sensitive fields so driver can see full rider profile
+      .populate({
+        path: "riderId",
+        // exclude sensitive fields only (avoid mixing inclusion + exclusion)
+        select: "-password -roles -isDeleted -resetPasswordToken -resetPasswordExpires",
+      })
+      .populate({
+        path: "driverId",
+        // exclude sensitive fields only
+        select: "-password -roles -isDeleted",
+      })
+      .populate({
+        path: "driverProfileId",
+        // include vehicle details and any profile metadata
+        select: "vehicle vehicleNumber vehicleType licenseNumber insurance expiryDate notes",
+      })
       .lean(),
   ]);
 

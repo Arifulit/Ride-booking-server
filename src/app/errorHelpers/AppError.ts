@@ -1,6 +1,5 @@
 /* eslint-disable semi */
 
-
 class AppError extends Error {
     public statusCode: number;
 
