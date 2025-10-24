@@ -35,14 +35,23 @@ router.patch(
     DriverController.updateProfile(req, res, next)
 );
 
+
 // Availability & Location
 router.patch(
   "/availability",
   authorize(["driver"]),
   validateBody(updateAvailabilityValidation),
-  (req: Request, res: Response, next: NextFunction) =>
-    DriverController.updateAvailability(req, res, next)
+  (req, res, next) => DriverController.updateAvailability(req, res, next)
 );
+
+// ALIAS: accept /online-status as alternative path for availability toggle
+router.patch(
+  "/online-status",
+  authorize(["driver"]),
+  validateBody(updateAvailabilityValidation),
+  (req, res, next) => DriverController.updateAvailability(req, res, next)
+);
+
 router.patch(
   "/location",
   authorize(["driver"]),

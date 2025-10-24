@@ -19,9 +19,24 @@ export const updateProfileValidation = z.object({
     .optional(),
 });
 
-export const updateAvailabilityValidation = z.object({
-  isOnline: z.boolean(),
-});
+
+
+export const updateAvailabilityValidation = z
+  .object({
+    available: z.boolean().optional(),
+    isOnline: z.boolean().optional(),
+    location: z
+      .object({
+        lon: z.number(),
+        lat: z.number(),
+      })
+      .optional(),
+  })
+  .refine((val) => val.available !== undefined || val.isOnline !== undefined, {
+    message: "available or isOnline is required",
+  });
+
+export type UpdateAvailabilityBody = z.infer<typeof updateAvailabilityValidation>;
 
 export const updateLocationValidation = z.object({
   longitude: z.number(),

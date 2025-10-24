@@ -33,4 +33,11 @@ router.get("/rides/stats", AdminController.getRideStats);
 router.get("/reports/overview", AdminController.getSystemOverview);
 router.get("/reports/earnings", AdminController.getEarningsReport);
 
+// Admin profile route
+router.get(
+  "/profile",
+  authorize(["admin"]),
+  (req, res, next) => AdminController.getProfile(req, res, next)
+);
+
 export const AdminRoutes = router;

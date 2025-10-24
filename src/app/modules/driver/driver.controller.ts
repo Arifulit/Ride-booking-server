@@ -36,72 +36,94 @@ const getProfile = catchAsync(async (req: Request, res: Response) => {
 /**
  * Update driver profile
  */
+// ...existing code...
 const updateProfile = catchAsync(async (req: Request, res: Response) => {
   try {
-    const allowedUpdates = ["vehicleInfo", "documentsUploaded"];
-    const updates: Partial<IDriver> = {};
+    const userId = (req as any).user?._id;
+    if (!userId) return ResponseUtils.error(res, "Unauthenticated", 401);
 
-    Object.keys(req.body).forEach((key) => {
-      if (allowedUpdates.includes(key)) {
-        (updates as any)[key] = req.body[key];
-      }
+    // fields allowed to update on Driver vs User
+    const allowedDriverFields = ["vehicleInfo", "documentsUploaded", "licenseNumber", "vehicleNumber", "vehicleType"];
+    const allowedUserFields = ["firstName", "lastName", "phone", "email"];
+
+    const driverUpdates: any = {};
+    const userUpdates: any = {};
+
+    Object.keys(req.body || {}).forEach((key) => {
+      const value = (req.body as any)[key];
+      if (allowedDriverFields.includes(key)) driverUpdates[key] = value;
+      if (allowedUserFields.includes(key)) userUpdates[key] = value;
     });
 
-    const driver = await Driver.findOneAndUpdate(
-      { userId: (req as any).user._id },
-      updates,
-      { new: true, runValidators: true }
-    ).populate("userId", "-password");
+    // ensure driver exists
+    let driver = await Driver.findOne({ userId });
+    if (!driver) return ResponseUtils.error(res, "Driver profile not found", 404);
 
-    if (!driver) {
-      ResponseUtils.error(res, "Driver profile not found 2", 404);
-      return;
+    // update driver document if needed
+    if (Object.keys(driverUpdates).length) {
+      driver = await Driver.findOneAndUpdate(
+        { userId },
+        { $set: driverUpdates },
+        { new: true, runValidators: true }
+      );
     }
 
-    ResponseUtils.success(
-      res,
-      { driver },
-      "Driver profile updated successfully"
-    );
+    // update linked user document if needed
+    if (Object.keys(userUpdates).length) {
+      if (!driver) {
+        // defensive check: ensure driver exists before accessing userId
+        return ResponseUtils.error(res, "Driver profile not found", 404);
+      }
+      await User.findByIdAndUpdate(driver.userId, { $set: userUpdates }, { new: true, runValidators: true });
+    }
+
+    // repopulate driver with user (hide password)
+    const driverId = driver?._id;
+    if (!driverId) {
+      // try to fetch driver by userId as a fallback and ensure driver exists
+      driver = await Driver.findOne({ userId }).populate("userId", "-password");
+      if (!driver) return ResponseUtils.error(res, "Driver profile not found after update", 404);
+    } else {
+      driver = await Driver.findById(driverId).populate("userId", "-password");
+      if (!driver) return ResponseUtils.error(res, "Driver profile not found after update", 404);
+    }
+
+    ResponseUtils.success(res, { driver }, "Driver profile updated successfully");
   } catch (error: any) {
     console.error("Update driver profile error:", error);
-    ResponseUtils.error(
-      res,
-      error.message || "Failed to update driver profile",
-      500
-    );
+    ResponseUtils.error(res, error?.message || "Failed to update driver profile", 500);
   }
 });
 
-/**
- * Update driver availability (online/offline)
- */
+// ...existing code...
 const updateAvailability = catchAsync(async (req: Request, res: Response) => {
-  try {
-    const { isOnline } = req.body;
+  const userId = (req as any).user?._id;
+  if (!userId) return ResponseUtils.error(res, "Unauthenticated", 401);
 
-    const driver = await Driver.findOneAndUpdate(
-      { userId: (req as any).user._id },
-      { isOnline: Boolean(isOnline) },
-      { new: true }
-    );
+  const body = req.body || {};
+  const hasIsOnline = Object.prototype.hasOwnProperty.call(body, "isOnline");
+  const hasAvailable = Object.prototype.hasOwnProperty.call(body, "available");
+  if (!hasIsOnline && !hasAvailable) return ResponseUtils.error(res, "available or isOnline boolean required", 400);
 
-    if (!driver) {
-      ResponseUtils.error(res, "Driver profile not found 3", 404);
-      return;
-    }
+  const isOnline = hasIsOnline ? Boolean(body.isOnline) : Boolean(body.available);
+  const update: any = { isOnline, availabilityChangedAt: new Date() };
 
-    ResponseUtils.success(
-      res,
-      { isOnline: driver.isOnline },
-      `Driver is now ${driver.isOnline ? "online" : "offline"}`
-    );
-  } catch (error) {
-    console.error("Update availability error:", error);
-    ResponseUtils.error(res, "Failed to update availability", 500);
+  if (body.location && typeof body.location.lon === "number" && typeof body.location.lat === "number") {
+    update.currentLocation = { type: "Point", coordinates: [body.location.lon, body.location.lat] };
   }
-});
 
+  const driver = await Driver.findOneAndUpdate({ userId: (req as any).user._id }, { $set: update }, { new: true });
+  if (!driver) return ResponseUtils.error(res, "Driver profile not found", 404);
+
+  // optional realtime notify
+  try {
+    const io = (req.app as any).get?.("io");
+    if (io) io.emit("driver:availability", { driverId: driver._id, isOnline: driver.isOnline, currentLocation: driver.currentLocation });
+  } catch (e) { console.error(e); }
+
+  return ResponseUtils.success(res, { isOnline: driver.isOnline }, `Driver is now ${driver.isOnline ? "online" : "offline"}`);
+});
+// ...existing exports...
 /**
  * Update driver current location
  */

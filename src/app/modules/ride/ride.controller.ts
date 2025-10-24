@@ -5,6 +5,7 @@ import Ride from "./ride.model";
 import RideService from "./ride.service";
 import ResponseUtils from "../../utils/response";
 import { catchAsync } from "../../utils/catchAsync";
+import User from "../user/user.model";
 // ...existing code...
 
 
@@ -184,14 +185,19 @@ const updateRideStatus = catchAsync(async (req: Request, res: Response) => {
 // Get Ride Details
 
 const getRideDetails = catchAsync(async (req: Request, res: Response) => {
-  const { rideId } = req.params;
-  const ride = await Ride.findById(rideId);
-  if (!ride) {
-    ResponseUtils.error(res, "Ride not found", 404);
-    return;
+  const { rideId } = req.params || {};
+
+  // Validate ObjectId to prevent Mongoose CastError
+  if (!rideId || !mongoose.Types.ObjectId.isValid(String(rideId))) {
+    return ResponseUtils.error(res, "Invalid ride id", 400);
   }
 
-  ResponseUtils.success(res, { ride }, "Ride details fetched successfully");
+  const ride = await Ride.findById(rideId).populate("driverId riderId");
+  if (!ride) {
+    return ResponseUtils.error(res, "Ride not found", 404);
+  }
+
+  ResponseUtils.success(res, { ride }, "Ride details fetched");
 });
 
 
@@ -409,6 +415,62 @@ const getPendingRides = catchAsync(async (req: Request, res: Response, next: Nex
   });
 
 
+
+
+
+const getAllRiderDetails = catchAsync(async (req, res) => {
+  const page = parseInt(String(req.query.page || "1"), 10) || 1;
+  const limit = Math.min(parseInt(String(req.query.limit || "20"), 10) || 20, 100);
+  const search = String(req.query.search || "").trim();
+
+  const query: any = { role: "rider" };
+  if (search) {
+    query.$or = [
+      { firstName: { $regex: search, $options: "i" } },
+      { lastName: { $regex: search, $options: "i" } },
+      { email: { $regex: search, $options: "i" } },
+      { "phone": { $regex: search, $options: "i" } },
+    ];
+  }
+
+  const total = await User.countDocuments(query);
+  const users = await User.find(query)
+    .select("-password")
+    .sort({ createdAt: -1 })
+    .skip((page - 1) * limit)
+    .limit(limit)
+    .lean();
+
+  // optional: attach ride counts per rider
+  const userIds = users.map((u: any) => u._id);
+  const counts = await Ride.aggregate([
+    { $match: { riderId: { $in: userIds } } },
+    { $group: { _id: "$riderId", count: { $sum: 1 } } },
+  ]);
+
+  const countsMap = new Map<string, number>(counts.map((c: any) => [String(c._id), c.count]));
+  const data = users.map((u: any) => ({ ...u, rideCount: countsMap.get(String(u._id)) || 0 }));
+  
+  return ResponseUtils.paginated(
+    res,
+    data,
+    {
+      currentPage: page,
+      totalPages: Math.ceil(total / limit),
+      totalItems: total,
+      hasNext: page * limit < total,
+      hasPrev: page > 1,
+    },
+    "Rider details retrieved"
+  );
+});
+
+const getActiveRides = catchAsync(async (req: Request, res: Response) => {
+  // optional: require roles, or use req.user to filter
+  const active = await Ride.find({ status: { $in: ["ongoing", "accepted"] } }).sort({ updatedAt: -1 }).limit(100);
+  return ResponseUtils.success(res, { rides: active }, "Active rides");
+});
+
 export const RideController = {
   getMyRides,
   cancelRide,
@@ -422,5 +484,7 @@ export const RideController = {
   getAdminAnalytics,
   searchNearbyDrivers,
   getAllRideRequests,
-  getPendingRides
+  getPendingRides,
+   getAllRiderDetails,
+  getActiveRides,
 };

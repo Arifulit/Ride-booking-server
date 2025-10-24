@@ -46,20 +46,54 @@ const getRideHistory = catchAsync(async (req: Request, res: Response) => {
   );
 });
 
+
+
+
 /**
- * Get user profile
+ * Get rider profile with summary
  */
 const getProfile = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as IUser & {
-    _id: string;
-    getPublicProfile: () => Omit<IUser, "password">;
-  };
-  ResponseUtils.success(
+  const rider = await User.findOne({
+    _id: (req as any).user._id,
+    role: "rider",
+  }).select("-password");
+
+  if (!rider) {
+    return ResponseUtils.error(res, "Rider profile not found", 404);
+  }
+
+  // Rider stats
+  const [totalRides, totalSpent, recentRides] = await Promise.all([
+    Ride.countDocuments({ riderId: rider._id, status: "completed" }),
+    Ride.aggregate([
+      { $match: { riderId: rider._id, status: "completed" } },
+      { $group: { _id: null, total: { $sum: "$fare.actual" } } },
+    ]),
+    Ride.find({ riderId: rider._id })
+      .populate("driver", "firstName lastName")
+      .sort({ createdAt: -1 })
+      .limit(5),
+  ]);
+
+  return ResponseUtils.success(
     res,
-    { user: user.getPublicProfile() },
-    "Profile retrieved successfully"
+    {
+      rider,
+      stats: {
+        totalCompletedRides: totalRides,
+        totalSpent: totalSpent[0]?.total || 0,
+      },
+      recentRides,
+    },
+    "Rider profile and summary"
   );
 });
+
+
+
+
+
+
 
 /**
  * Get all users (admin only)

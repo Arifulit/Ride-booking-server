@@ -454,6 +454,79 @@ const getEarningsReport = catchAsync(async (req: Request, res: Response) => {
     "Earnings report retrieved successfully"
   );
 });
+/**
+ * Get admin profile
+ */
+const getProfile = catchAsync(async (req: Request, res: Response) => {
+  // Basic admin info
+  const admin = await User.findOne({
+    _id: (req as any).user._id,
+    role: "admin",
+  }).select("-password");
+
+  if (!admin) {
+    return ResponseUtils.error(res, "Admin profile not found", 404);
+  }
+
+  // System summary (admin's responsibilities)
+  const [
+    totalUsers,
+    totalDrivers,
+    totalRiders,
+    totalRides,
+    onlineDrivers,
+    pendingDrivers,
+    activeRides,
+    completedRides,
+    totalEarnings,
+  ] = await Promise.all([
+    User.countDocuments(),
+    Driver.countDocuments(),
+    User.countDocuments({ role: "rider" }),
+    Ride.countDocuments(),
+    Driver.countDocuments({ isOnline: true, approvalStatus: "approved" }),
+    Driver.countDocuments({ approvalStatus: "pending" }),
+    Ride.countDocuments({ status: { $in: ["requested", "accepted", "picked_up", "in_transit"] } }),
+    Ride.countDocuments({ status: "completed" }),
+    Ride.aggregate([
+      { $match: { status: "completed" } },
+      { $group: { _id: null, total: { $sum: "$fare.actual" } } },
+    ]),
+  ]);
+
+  // Recent activity (last 5 rides)
+  const recentRides = await Ride.find()
+    .populate("riderId", "firstName lastName")
+    .populate("driver", "firstName lastName")
+    .sort({ createdAt: -1 })
+    .limit(5);
+
+  return ResponseUtils.success(
+    res,
+    {
+      admin,
+      responsibilities: [
+        "User management (block/unblock users, view users)",
+        "Driver management (approve/reject/suspend drivers, view drivers)",
+        "Ride management (view all rides, monitor active rides)",
+        "System analytics (view stats, earnings, recent activity)",
+      ],
+      systemStats: {
+        totalUsers,
+        totalDrivers,
+        totalRiders,
+        totalRides,
+        onlineDrivers,
+        pendingDrivers,
+        activeRides,
+        completedRides,
+        totalEarnings: totalEarnings[0]?.total || 0,
+      },
+      recentActivity: recentRides,
+    },
+    "Admin profile and dashboard summary"
+  );
+});
 
 export const AdminController = {
   
@@ -469,4 +542,5 @@ export const AdminController = {
   getRideStats,
   getSystemOverview,
   getEarningsReport,
+  getProfile,
 };
