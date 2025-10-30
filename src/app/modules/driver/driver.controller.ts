@@ -96,33 +96,37 @@ const updateProfile = catchAsync(async (req: Request, res: Response) => {
 });
 
 // ...existing code...
+// ...existing code...
 const updateAvailability = catchAsync(async (req: Request, res: Response) => {
   const userId = (req as any).user?._id;
   if (!userId) return ResponseUtils.error(res, "Unauthenticated", 401);
 
   const body = req.body || {};
-  const hasIsOnline = Object.prototype.hasOwnProperty.call(body, "isOnline");
+
+  // accept either `isAvailable` or `available` only
+  const hasIsAvailable = Object.prototype.hasOwnProperty.call(body, "isAvailable");
   const hasAvailable = Object.prototype.hasOwnProperty.call(body, "available");
-  if (!hasIsOnline && !hasAvailable) return ResponseUtils.error(res, "available or isOnline boolean required", 400);
 
-  const isOnline = hasIsOnline ? Boolean(body.isOnline) : Boolean(body.available);
-  const update: any = { isOnline, availabilityChangedAt: new Date() };
-
-  if (body.location && typeof body.location.lon === "number" && typeof body.location.lat === "number") {
-    update.currentLocation = { type: "Point", coordinates: [body.location.lon, body.location.lat] };
+  if (!hasIsAvailable && !hasAvailable) {
+    return ResponseUtils.error(res, "available or isAvailable is required", 400);
   }
 
-  const driver = await Driver.findOneAndUpdate({ userId: (req as any).user._id }, { $set: update }, { new: true });
-  if (!driver) return ResponseUtils.error(res, "Driver profile not found", 404);
+  const update: any = {};
+  if (hasIsAvailable) update.isAvailable = Boolean(body.isAvailable);
+  if (hasAvailable) update.isAvailable = Boolean(body.available);
 
-  // optional realtime notify
-  try {
-    const io = (req.app as any).get?.("io");
-    if (io) io.emit("driver:availability", { driverId: driver._id, isOnline: driver.isOnline, currentLocation: driver.currentLocation });
-  } catch (e) { console.error(e); }
+  const driver = await Driver.findOneAndUpdate(
+    { userId },
+    { $set: update },
+    { new: true, runValidators: true }
+  ).populate("userId", "-password");
 
-  return ResponseUtils.success(res, { isOnline: driver.isOnline }, `Driver is now ${driver.isOnline ? "online" : "offline"}`);
+  if (!driver) return ResponseUtils.error(res, "Driver not found", 404);
+
+  ResponseUtils.success(res, { driver }, "Availability updated successfully");
 });
+// ...existing code...
+
 // ...existing exports...
 /**
  * Update driver current location
@@ -394,6 +398,35 @@ const getRidersList = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+// ...existing code...
+const updateOnlineStatus = catchAsync(async (req: Request, res: Response) => {
+  const userId = (req as any).user?._id;
+  if (!userId) return ResponseUtils.error(res, "Unauthenticated", 401);
+
+  if (!Object.prototype.hasOwnProperty.call(req.body || {}, "isOnline")) {
+    return ResponseUtils.error(res, "isOnline is required", 400);
+  }
+
+  const isOnline = Boolean((req.body as any).isOnline);
+
+  const driver = await Driver.findOneAndUpdate(
+    { userId },
+    { $set: { isOnline } },
+    { new: true, runValidators: true }
+  ).select("isOnline"); // only select isOnline
+
+  if (!driver) return ResponseUtils.error(res, "Driver not found", 404);
+
+  // return only isOnline boolean
+  res.status(200).json({
+    success: true,
+    message: "Driver online status updated",
+    data: { isOnline: !!driver.isOnline },
+    errors: null,
+    timestamp: new Date().toISOString(),
+  });
+});
+// ...existing code...
 
 
 
@@ -410,5 +443,7 @@ export const DriverController = {
   getEarnings,
   getDetailedEarnings,
   getRidersList,
+  updateOnlineStatus,
+  
  
 };

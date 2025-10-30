@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable @typescript-eslint/no-unused-vars */
-
+import * as bcrypt from "bcryptjs";
 import { Request, Response } from "express";
 import User from "../user/user.model";
 import { IUser } from "../user/user.interface";
@@ -228,14 +228,21 @@ const getPendingDrivers = catchAsync(async (req: Request, res: Response) => {
   );
 });
 
+
+
 /** Approve driver */
 const approveDriver = catchAsync(async (req: Request, res: Response) => {
   const driverId = req.params.driverId;
-  const { notes } = req.body;
+  const { notes } = req.body || {};
+
+  if (!driverId) {
+    ResponseUtils.error(res, "driverId is required", 400);
+    return;
+  }
 
   const driver: IDriver | null = await Driver.findByIdAndUpdate(
     driverId,
-    { approvalStatus: "approved", approvalNotes: notes || "Approved by admin" },
+    { approvalStatus: "approved", approvalNotes: notes || "Approved by admin", approvedAt: new Date() },
     { new: true }
   ).populate("userId", "firstName lastName email phone");
 
@@ -249,13 +256,19 @@ const approveDriver = catchAsync(async (req: Request, res: Response) => {
 /** Reject driver */
 const rejectDriver = catchAsync(async (req: Request, res: Response) => {
   const driverId = req.params.driverId;
-  const { reason } = req.body;
+  const { reason } = req.body || {};
+
+  if (!driverId) {
+    ResponseUtils.error(res, "driverId is required", 400);
+    return;
+  }
 
   const driver: IDriver | null = await Driver.findByIdAndUpdate(
     driverId,
     {
       approvalStatus: "rejected",
       approvalNotes: reason || "Rejected by admin",
+      rejectedAt: new Date(),
     },
     { new: true }
   ).populate("userId", "firstName lastName email phone");
@@ -270,7 +283,12 @@ const rejectDriver = catchAsync(async (req: Request, res: Response) => {
 /** Suspend driver */
 const suspendDriver = catchAsync(async (req: Request, res: Response) => {
   const driverId = req.params.driverId;
-  const { reason } = req.body;
+  const { reason } = req.body || {};
+
+  if (!driverId) {
+    ResponseUtils.error(res, "driverId is required", 400);
+    return;
+  }
 
   const driver: IDriver | null = await Driver.findByIdAndUpdate(
     driverId,
@@ -278,6 +296,7 @@ const suspendDriver = catchAsync(async (req: Request, res: Response) => {
       approvalStatus: "suspended",
       isOnline: false,
       approvalNotes: reason || "Suspended by admin",
+      suspendedAt: new Date(),
     },
     { new: true }
   ).populate("userId", "firstName lastName email phone");
@@ -288,6 +307,7 @@ const suspendDriver = catchAsync(async (req: Request, res: Response) => {
   }
   ResponseUtils.success(res, { driver }, "Driver suspended successfully");
 });
+// ...existing code...
 
 /** Get all rides with pagination */
 
@@ -458,78 +478,137 @@ const getEarningsReport = catchAsync(async (req: Request, res: Response) => {
  * Get admin profile
  */
 const getProfile = catchAsync(async (req: Request, res: Response) => {
-  // Basic admin info
-  const admin = await User.findOne({
-    _id: (req as any).user._id,
-    role: "admin",
-  }).select("-password");
+  const adminId = (req as any).user?._id;
+
+  // try to fetch by requester id first, fallback to any admin user
+  let admin = null;
+  if (adminId) {
+    admin = await User.findOne({ _id: adminId, role: "admin" }).select(
+      "-password -auths"
+    );
+  }
+  if (!admin) {
+    admin = await User.findOne({ role: "admin" }).select("-password -auths");
+  }
 
   if (!admin) {
     return ResponseUtils.error(res, "Admin profile not found", 404);
   }
 
-  // System summary (admin's responsibilities)
-  const [
-    totalUsers,
-    totalDrivers,
-    totalRiders,
-    totalRides,
-    onlineDrivers,
-    pendingDrivers,
-    activeRides,
-    completedRides,
-    totalEarnings,
-  ] = await Promise.all([
-    User.countDocuments(),
-    Driver.countDocuments(),
-    User.countDocuments({ role: "rider" }),
-    Ride.countDocuments(),
-    Driver.countDocuments({ isOnline: true, approvalStatus: "approved" }),
-    Driver.countDocuments({ approvalStatus: "pending" }),
-    Ride.countDocuments({ status: { $in: ["requested", "accepted", "picked_up", "in_transit"] } }),
-    Ride.countDocuments({ status: "completed" }),
-    Ride.aggregate([
-      { $match: { status: "completed" } },
-      { $group: { _id: null, total: { $sum: "$fare.actual" } } },
-    ]),
+  return ResponseUtils.success(res, { admin }, "Admin profile retrieved");
+});
+
+
+/** Get all riders (admin only) */
+const getAllRiders = catchAsync(async (req: Request, res: Response) => {
+  const page = getStringParam(req.query.page, "1");
+  const limit = getStringParam(req.query.limit, "10");
+  const q = getStringParam(req.query.q, "");
+  const isBlockedParam = getStringParam(req.query.isBlocked, "");
+  const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+  const limitNum = Math.max(parseInt(limit, 10) || 10, 1);
+
+  const query: any = { role: "rider" };
+  if (isBlockedParam === "true") query.isBlocked = true;
+  else if (isBlockedParam === "false") query.isBlocked = { $ne: true };
+
+  if (q) {
+    const re = new RegExp(q, "i");
+    query.$or = [
+      { firstName: re },
+      { lastName: re },
+      { email: re },
+      { phone: re },
+    ];
+  }
+
+  const [total, riders] = await Promise.all([
+    User.countDocuments(query),
+    User.find(query)
+      .select("-password -auths")
+      .sort({ createdAt: -1 })
+      .skip((pageNum - 1) * limitNum)
+      .limit(limitNum)
+      .lean(),
   ]);
 
-  // Recent activity (last 5 rides)
-  const recentRides = await Ride.find()
-    .populate("riderId", "firstName lastName")
-    .populate("driver", "firstName lastName")
-    .sort({ createdAt: -1 })
-    .limit(5);
-
-  return ResponseUtils.success(
+  ResponseUtils.paginated(
     res,
+    riders,
     {
-      admin,
-      responsibilities: [
-        "User management (block/unblock users, view users)",
-        "Driver management (approve/reject/suspend drivers, view drivers)",
-        "Ride management (view all rides, monitor active rides)",
-        "System analytics (view stats, earnings, recent activity)",
-      ],
-      systemStats: {
-        totalUsers,
-        totalDrivers,
-        totalRiders,
-        totalRides,
-        onlineDrivers,
-        pendingDrivers,
-        activeRides,
-        completedRides,
-        totalEarnings: totalEarnings[0]?.total || 0,
-      },
-      recentActivity: recentRides,
+      currentPage: pageNum,
+      totalPages: Math.max(1, Math.ceil(total / limitNum)),
+      totalRiders: total,
+      hasNext: pageNum * limitNum < total,
+      hasPrev: pageNum > 1,
     },
-    "Admin profile and dashboard summary"
+    "Riders retrieved successfully"
   );
 });
 
+
+
+
+
+
+
+/**
+ * Update admin profile (only profile fields + optional password change)
+ * - Allowed fields: firstName, lastName, email, phone
+ * - To change password provide currentPassword and newPassword in body
+ */
+const updateProfile = catchAsync(async (req: Request, res: Response) => {
+  try {
+    const adminId = (req as any).user?._id;
+    if (!adminId) return ResponseUtils.error(res, "Unauthenticated", 401);
+
+    const body = req.body || {};
+    const allowed = ["firstName", "lastName", "email", "phone"];
+    const updates: any = {};
+
+    Object.keys(body).forEach((k) => {
+      if (allowed.includes(k)) updates[k] = (body as any)[k];
+    });
+
+    // email uniqueness check
+    if (updates.email) {
+      const exists = await User.findOne({ email: updates.email, _id: { $ne: adminId } });
+      if (exists) return ResponseUtils.error(res, "Email already in use", 400);
+    }
+
+    // password change flow
+    if (body.currentPassword && body.newPassword) {
+      const admin = await User.findById(adminId).select("+password");
+      if (!admin) return ResponseUtils.error(res, "Admin not found", 404);
+
+      const match = await bcrypt.compare(String(body.currentPassword), (admin as any).password || "");
+      if (!match) return ResponseUtils.error(res, "Current password is incorrect", 400);
+
+      const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUND || "10", 10);
+      (admin as any).password = await bcrypt.hash(String(body.newPassword), saltRounds);
+      await admin.save();
+    }
+
+    // apply profile updates
+    let updated = null;
+    if (Object.keys(updates).length) {
+      updated = await User.findByIdAndUpdate(adminId, { $set: updates }, { new: true, runValidators: true }).select("-password -auths");
+    } else {
+      updated = await User.findById(adminId).select("-password -auths");
+    }
+
+    if (!updated) return ResponseUtils.error(res, "Admin profile not found", 404);
+    ResponseUtils.success(res, { admin: updated }, "Admin profile updated successfully");
+  } catch (err: any) {
+    console.error("Admin updateProfile error:", err);
+    ResponseUtils.error(res, err?.message || "Failed to update admin profile", 500);
+  }
+});
+// ...existing code...
+
+
+
 export const AdminController = {
-  
   getAllUsers,
   blockUser,
   unblockUser,
@@ -543,4 +622,8 @@ export const AdminController = {
   getSystemOverview,
   getEarningsReport,
   getProfile,
+  getAllRiders,
+  updateProfile,
 };
+
+

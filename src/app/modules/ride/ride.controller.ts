@@ -418,7 +418,7 @@ const getPendingRides = catchAsync(async (req: Request, res: Response, next: Nex
 
 
 
-const getAllRiderDetails = catchAsync(async (req, res) => {
+const getAllRiders = catchAsync(async (req, res) => {
   const page = parseInt(String(req.query.page || "1"), 10) || 1;
   const limit = Math.min(parseInt(String(req.query.limit || "20"), 10) || 20, 100);
   const search = String(req.query.search || "").trim();
@@ -471,6 +471,41 @@ const getActiveRides = catchAsync(async (req: Request, res: Response) => {
   return ResponseUtils.success(res, { rides: active }, "Active rides");
 });
 
+
+// ...existing code...
+const getRideHistory = catchAsync(async (req, res) => {
+  const userId = (req as any).user?._id;
+  const page = Math.max(parseInt(String(req.query.page || "1"), 10), 1);
+  const limit = Math.max(parseInt(String(req.query.limit || "10"), 10), 1);
+  const skip = (page - 1) * limit;
+
+  const filter: any = { userId }; // add more filters from req.query if needed
+
+  const [total, rides] = await Promise.all([
+    Ride.countDocuments(filter),
+    Ride.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate("driverId", "firstName lastName phone")
+      .lean(),
+  ]);
+
+  return ResponseUtils.paginated(
+    res,
+    rides,
+    {
+      currentPage: page,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+      totalItems: total,
+      hasNext: page * limit < total,
+      hasPrev: page > 1,
+    },
+    "Ride history fetched"
+  );
+});
+
+
 export const RideController = {
   getMyRides,
   cancelRide,
@@ -485,6 +520,7 @@ export const RideController = {
   searchNearbyDrivers,
   getAllRideRequests,
   getPendingRides,
-   getAllRiderDetails,
+   getAllRiders,
   getActiveRides,
+  getRideHistory
 };

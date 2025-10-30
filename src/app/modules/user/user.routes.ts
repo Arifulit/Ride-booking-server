@@ -38,4 +38,6 @@ router.get(
     UserController.getAllUsers(req, res, next)
 );
 
+// router.patch("/profile/password", (req, res, next) => UserController.changePassword(req, res, next));
+
 export default router;

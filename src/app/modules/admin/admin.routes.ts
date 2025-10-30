@@ -1,4 +1,3 @@
-
 import { Router } from "express";
 import { authenticate } from "../../middlewares/auth.middleware";
 import { authorize } from "../../middlewares/role.middleware";
@@ -6,15 +5,13 @@ import { AdminController } from "./admin.controller";
 
 const router = Router();
 
-// Admin registration (public)
-// router.post("/register", AdminController.adminRegister);
-
 // Auth + admin role for all following routes
 router.use(authenticate);
 router.use(authorize(["admin"]));
 
 // User management
 router.get("/users", AdminController.getAllUsers);
+router.get("/riders", AdminController.getAllRiders);
 router.patch("/users/:userId/block", AdminController.blockUser);
 router.patch("/users/:userId/unblock", AdminController.unblockUser);
 
@@ -27,17 +24,14 @@ router.patch("/drivers/:driverId/suspend", AdminController.suspendDriver);
 
 // Ride management
 router.get("/rides", AdminController.getAllRides);
-router.get("/rides/stats", AdminController.getRideStats);
+router.get("/rides/statistics", AdminController.getRideStats);
 
 // System reports
 router.get("/reports/overview", AdminController.getSystemOverview);
 router.get("/reports/earnings", AdminController.getEarningsReport);
 
-// Admin profile route
-router.get(
-  "/profile",
-  authorize(["admin"]),
-  (req, res, next) => AdminController.getProfile(req, res, next)
-);
+// Admin profile routes
+router.get("/profile", AdminController.getProfile);
+router.patch("/profile", AdminController.updateProfile);
 
 export const AdminRoutes = router;

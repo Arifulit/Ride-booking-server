@@ -45,12 +45,22 @@ router.patch(
 );
 
 // ALIAS: accept /online-status as alternative path for availability toggle
+// router.patch(
+//   "/online-status",
+//   authorize(["driver"]),
+//   validateBody(updateAvailabilityValidation),
+//   (req, res, next) => DriverController.updateAvailability(req, res, next)
+// );
+
+// ...existing code...
+// ALIAS: accept /online-status as alternative path for availability toggle
 router.patch(
   "/online-status",
   authorize(["driver"]),
-  validateBody(updateAvailabilityValidation),
-  (req, res, next) => DriverController.updateAvailability(req, res, next)
+  // call updateOnlineStatus which accepts { isOnline?: boolean, available?: boolean, location?: { lon, lat } }
+  (req, res, next) => DriverController.updateOnlineStatus(req, res, next)
 );
+// ...existing code...
 
 router.patch(
   "/location",

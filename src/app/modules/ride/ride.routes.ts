@@ -171,7 +171,8 @@ router.get("/requests", requireApprovedDriver, asyncHandler(RideController.getAl
 // --- ADMIN / STATIC routes (must be BEFORE dynamic :rideId) ---
 router.get("/history/all", authorize(["admin"]), asyncHandler(RideController.getAllRidesHistory));
 router.get("/admin/analytics", authorize(["admin"]), asyncHandler(RideController.getAdminAnalytics));
-router.get("/details", authorize(["admin","rider"]), asyncHandler(RideController.getAllRiderDetails));
+// router.get("/details", authorize(["admin","rider"]), asyncHandler(RideController.getAllRiderDetails));
+router.get("/all-riders", authorize(["admin","rider"]), asyncHandler(RideController.getAllRiders));
 router.get("/active", authorize(["admin", "driver"]), asyncHandler(RideController.getActiveRides));
 
 // DYNAMIC route: keep at the very end so static routes match first

@@ -8,6 +8,7 @@ import User from "../user/user.model";
 import { catchAsync } from "../../utils/catchAsync";
 import AppError from "../../errorHelpers/AppError";
 import passport from "passport";
+import bcrypt from "bcryptjs";
 // Interface definitions for request bodies
 interface RegisterRequestBody {
   firstName: string;
@@ -111,59 +112,132 @@ const register = catchAsync(
 /**
  * Login user
  */
+// const login = catchAsync(
+//   async (
+//     req: Request<{}, AuthResponse, LoginRequestBody>,
+//     res: Response<any>,
+//     next: NextFunction
+//   ) => {
+//     const { email, password } = req.body;
+//     // console.log("Login request:", { email, password });
+
+//     // Find user by email
+//     const user = (await User.findOne({ email }).select("+password")) as any;
+
+//     // console.log("User found:", user);
+
+//     if (!user) {
+//       return ResponseUtils.error(res, "Invalid email or password", 401);
+//     }
+
+//     // console.log("Hashed password from DB:", user.password);
+//     // Check if user is blocked
+//     if (user.isBlocked) {
+//       return ResponseUtils.error(
+//         res,
+//         "Account has been blocked. Contact support.",
+//         403
+//       );
+//     }
+
+//     // Verify password
+//     const isPasswordValid: boolean = await user.checkPassword(password);
+
+//     // console.log("Password valid:", isPasswordValid);
+
+//     if (!isPasswordValid) {
+//       return ResponseUtils.error(res, "Invalid email or password", 401);
+//     }
+
+//     // Generate tokens
+//     const tokens = authService.generateTokens(user);
+
+//     // Update last login
+//     user.lastLogin = new Date();
+//     await user.save();
+
+//     // Get additional info for drivers
+//     let additionalData: { driverProfile?: IDriver } = {};
+//     if (user.role === "driver") {
+//       const driverProfile = (await Driver.findOne({
+//         userId: user._id,
+//       })) as any;
+//       if (driverProfile) {
+//         additionalData.driverProfile = driverProfile;
+//       }
+//     }
+
+//     ResponseUtils.success(
+//       res,
+//       {
+//         user: user.getPublicProfile(),
+//         tokens,
+//         ...additionalData,
+//       },
+//       "Login successful"
+//     );
+//   }
+// );
+
+
+
+// ...existing code...
+
+// ...existing code...
+
+// ...existing code...
+
 const login = catchAsync(
   async (
     req: Request<{}, AuthResponse, LoginRequestBody>,
     res: Response<any>,
     next: NextFunction
   ) => {
-    const { email, password } = req.body;
-    // console.log("Login request:", { email, password });
+    const { email, password } = req.body || {};
 
-    // Find user by email
-    const user = (await User.findOne({ email }).select("+password")) as any;
+    if (!email || !password) {
+      return ResponseUtils.error(res, "Email and password required", 400);
+    }
 
-    // console.log("User found:", user);
+    const emailNormalized = String(email).trim().toLowerCase();
+
+    // fetch including password
+    const user = (await User.findOne({ email: emailNormalized }).select("+password")) as any;
 
     if (!user) {
+      // console.log("[LOGIN] user not found:", emailNormalized);
       return ResponseUtils.error(res, "Invalid email or password", 401);
     }
 
-    // console.log("Hashed password from DB:", user.password);
-    // Check if user is blocked
+    // debug info (safe: don't log raw passwords)
+    // console.log("[LOGIN] found user:", { email: user.email, id: user._id?.toString(), hasPassword: !!user.password });
+
     if (user.isBlocked) {
-      return ResponseUtils.error(
-        res,
-        "Account has been blocked. Contact support.",
-        403
-      );
+      return ResponseUtils.error(res, "Account has been blocked. Contact support.", 403);
     }
 
-    // Verify password
-    const isPasswordValid: boolean = await user.checkPassword(password);
+    if (!user.password) {
+      console.log("[LOGIN] no password hash for user:", emailNormalized);
+      return ResponseUtils.error(res, "No password set for this account. Use password reset.", 400);
+    }
 
-    // console.log("Password valid:", isPasswordValid);
+    // verify password
+    const isPasswordValid = await bcrypt.compare(String(password), (user as any).password || "");
+    console.log("[LOGIN] password compare result for", emailNormalized, ":", isPasswordValid);
 
     if (!isPasswordValid) {
       return ResponseUtils.error(res, "Invalid email or password", 401);
     }
 
-    // Generate tokens
+    // Generate tokens and continue normal flow
     const tokens = authService.generateTokens(user);
-
-    // Update last login
     user.lastLogin = new Date();
     await user.save();
 
-    // Get additional info for drivers
     let additionalData: { driverProfile?: IDriver } = {};
     if (user.role === "driver") {
-      const driverProfile = (await Driver.findOne({
-        userId: user._id,
-      })) as any;
-      if (driverProfile) {
-        additionalData.driverProfile = driverProfile;
-      }
+      const driverProfile = (await Driver.findOne({ userId: user._id })) as any;
+      if (driverProfile) additionalData.driverProfile = driverProfile;
     }
 
     ResponseUtils.success(
@@ -177,6 +251,8 @@ const login = catchAsync(
     );
   }
 );
+// ...existing code...
+
 
 
 
