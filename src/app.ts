@@ -105,8 +105,6 @@
 // app.use(errorHandler); // Global error handler
 
 
-
-// export default app;
 import express, { Application, Request, Response, NextFunction } from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -125,37 +123,32 @@ app.use(helmet()); // Secure HTTP headers
 const rawOrigins =
   process.env.CORS_ORIGINS ||
   process.env.FRONTEND_URL ||
-  "http://localhost:5173,https://ride-booking-client-bay.vercel.app";
+  "http://localhost:5173,https://ride-booking-client-one.vercel.app,https://ride-booking-client-bay.vercel.app";
 
 const allowedOrigins = rawOrigins
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
 
-/**
- * origin callback: allow requests with no origin (Postman/server-to-server),
- * allow when origin exactly matches allowedOrigins otherwise reject.
- */
+// CORS options
 const corsOptions = {
   origin: (origin: any, callback: (err: Error | null, allow?: boolean) => void) => {
-    if (!origin) return callback(null, true); // allow non-browser requests
+    // allow server-to-server or Postman requests with no origin
+    if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) return callback(null, true);
+
     console.warn("❌ CORS blocked origin:", origin);
     return callback(new Error("Not allowed by CORS"));
   },
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
-  optionsSuccessStatus: 200,
+  optionsSuccessStatus: 204, // for successful OPTIONS preflight
 };
 
 app.use(cors(corsOptions));
-// Ensure preflight (OPTIONS) is handled for all routes
-app.use((req: Request, res: Response, next: NextFunction) => {
-  if (req.method === "OPTIONS") {
-    // run CORS for preflight then send OK (headers set by cors middleware)
-    return cors(corsOptions)(req as any, res as any, () => res.sendStatus(200));
-  }
-  return next();
-});
+// Handle preflight requests for all routes
+app.options("*", cors(corsOptions));
 
 /* ---------------- Rate Limiting ---------------- */
 const limiter = rateLimit({
