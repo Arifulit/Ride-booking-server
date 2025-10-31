@@ -13,7 +13,7 @@ app.use(helmet()); // Secure HTTP headers
 
 // CORS: allow frontend URL or all in development
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:5173", // fallback for dev
+  origin: process.env.FRONTEND_URL || "https://ride-booking-client-bay.vercel.app" || "http://localhost:5173", // fallback for dev
   credentials: true,
 }));
 
