@@ -104,6 +104,8 @@
 // app.use(notFound); // 404 middleware
 // app.use(errorHandler); // Global error handler
 
+
+
 // export default app;
 import express, { Application, Request, Response, NextFunction } from "express";
 import cors from "cors";
@@ -147,7 +149,13 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 // Ensure preflight (OPTIONS) is handled for all routes
-app.options("*", cors(corsOptions));
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if (req.method === "OPTIONS") {
+    // run CORS for preflight then send OK (headers set by cors middleware)
+    return cors(corsOptions)(req as any, res as any, () => res.sendStatus(200));
+  }
+  return next();
+});
 
 /* ---------------- Rate Limiting ---------------- */
 const limiter = rateLimit({
