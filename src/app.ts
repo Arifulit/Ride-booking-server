@@ -148,7 +148,13 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 // Handle preflight requests for all routes
-app.options("*", cors(corsOptions));
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if (req.method === "OPTIONS") {
+    // run cors middleware for this request then send 200
+    return cors(corsOptions)(req as any, res as any, () => res.sendStatus(200));
+  }
+  return next();
+});
 
 /* ---------------- Rate Limiting ---------------- */
 const limiter = rateLimit({
