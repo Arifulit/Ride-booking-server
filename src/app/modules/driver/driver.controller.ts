@@ -36,7 +36,7 @@ const getProfile = catchAsync(async (req: Request, res: Response) => {
 /**
  * Update driver profile
  */
-// ...existing code...
+
 const updateProfile = catchAsync(async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user?._id;
@@ -95,8 +95,7 @@ const updateProfile = catchAsync(async (req: Request, res: Response) => {
   }
 });
 
-// ...existing code...
-// ...existing code...
+
 const updateAvailability = catchAsync(async (req: Request, res: Response) => {
   const userId = (req as any).user?._id;
   if (!userId) return ResponseUtils.error(res, "Unauthenticated", 401);
@@ -125,9 +124,9 @@ const updateAvailability = catchAsync(async (req: Request, res: Response) => {
 
   ResponseUtils.success(res, { driver }, "Availability updated successfully");
 });
-// ...existing code...
 
-// ...existing exports...
+
+
 /**
  * Update driver current location
  */
@@ -398,7 +397,7 @@ const getRidersList = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-// ...existing code...
+
 const updateOnlineStatus = catchAsync(async (req: Request, res: Response) => {
   const userId = (req as any).user?._id;
   if (!userId) return ResponseUtils.error(res, "Unauthenticated", 401);
@@ -426,7 +425,7 @@ const updateOnlineStatus = catchAsync(async (req: Request, res: Response) => {
     timestamp: new Date().toISOString(),
   });
 });
-// ...existing code...
+
 
 
 

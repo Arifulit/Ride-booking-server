@@ -44,15 +44,7 @@ router.patch(
   (req, res, next) => DriverController.updateAvailability(req, res, next)
 );
 
-// ALIAS: accept /online-status as alternative path for availability toggle
-// router.patch(
-//   "/online-status",
-//   authorize(["driver"]),
-//   validateBody(updateAvailabilityValidation),
-//   (req, res, next) => DriverController.updateAvailability(req, res, next)
-// );
 
-// ...existing code...
 // ALIAS: accept /online-status as alternative path for availability toggle
 router.patch(
   "/online-status",
@@ -60,7 +52,7 @@ router.patch(
   // call updateOnlineStatus which accepts { isOnline?: boolean, available?: boolean, location?: { lon, lat } }
   (req, res, next) => DriverController.updateOnlineStatus(req, res, next)
 );
-// ...existing code...
+
 
 router.patch(
   "/location",
@@ -80,7 +72,8 @@ router.get(
 // Allow drivers to fetch assigned or unassigned ride requests (same handler as ride module)
 router.get(
   "/rides/requests",
-  requireApprovedDriver,
+  // requireApprovedDriver,
+   authorize(["driver", "admin"]),
   (req: Request, res: Response, next: NextFunction) =>
     RideController.getAllRideRequests(req, res, next)
 );

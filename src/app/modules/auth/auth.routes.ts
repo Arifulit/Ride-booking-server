@@ -17,6 +17,6 @@ router.post("/login", validateBody(loginSchema), AuthController.login);
 router.post("/logout", authenticate, AuthController.logout);
 router.get("/me", authenticate, AuthController.getProfile);
 router.patch("/profile", authenticate, AuthController.updateProfile);
-
+router.post("/change-password", authenticate, AuthController.changePassword);
 // Export only AuthRoutes
 export const AuthRoutes = router;

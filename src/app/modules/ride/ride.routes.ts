@@ -177,5 +177,10 @@ router.get("/active", authorize(["admin", "driver"]), asyncHandler(RideControlle
 
 // DYNAMIC route: keep at the very end so static routes match first
 router.get("/:rideId", asyncHandler(RideController.getRideDetails));
-
+// GET /api/v1/rider/rides
+router.get(
+  "/rider/rides",
+  (req: Request, res: Response, next: NextFunction) =>
+    RideController.getRiderRides(req, res, next)
+);
 export const RideRoutes = router;

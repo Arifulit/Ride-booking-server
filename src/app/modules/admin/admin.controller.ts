@@ -10,7 +10,9 @@ import Ride from "../ride/ride.model";
 import { IRide } from "../ride/ride.interface";
 import ResponseUtils from "../../utils/response";
 import type { ParsedQs } from "qs";
-
+import fs from "fs/promises";
+import path from "path";
+import * as mongoose from "mongoose";
 import {
   AdminRegisterBody,
   BlockUserBody,
@@ -19,7 +21,6 @@ import {
   StatsQuery,
 } from "./admin.interface";
 import { catchAsync } from "../../utils/catchAsync";
-
 
 /** Get all users with pagination */
 function getRoleString(
@@ -228,8 +229,6 @@ const getPendingDrivers = catchAsync(async (req: Request, res: Response) => {
   );
 });
 
-
-
 /** Approve driver */
 const approveDriver = catchAsync(async (req: Request, res: Response) => {
   const driverId = req.params.driverId;
@@ -242,7 +241,11 @@ const approveDriver = catchAsync(async (req: Request, res: Response) => {
 
   const driver: IDriver | null = await Driver.findByIdAndUpdate(
     driverId,
-    { approvalStatus: "approved", approvalNotes: notes || "Approved by admin", approvedAt: new Date() },
+    {
+      approvalStatus: "approved",
+      approvalNotes: notes || "Approved by admin",
+      approvedAt: new Date(),
+    },
     { new: true }
   ).populate("userId", "firstName lastName email phone");
 
@@ -307,7 +310,7 @@ const suspendDriver = catchAsync(async (req: Request, res: Response) => {
   }
   ResponseUtils.success(res, { driver }, "Driver suspended successfully");
 });
-// ...existing code...
+
 
 /** Get all rides with pagination */
 
@@ -498,7 +501,6 @@ const getProfile = catchAsync(async (req: Request, res: Response) => {
   return ResponseUtils.success(res, { admin }, "Admin profile retrieved");
 });
 
-
 /** Get all riders (admin only) */
 const getAllRiders = catchAsync(async (req: Request, res: Response) => {
   const page = getStringParam(req.query.page, "1");
@@ -546,12 +548,6 @@ const getAllRiders = catchAsync(async (req: Request, res: Response) => {
   );
 });
 
-
-
-
-
-
-
 /**
  * Update admin profile (only profile fields + optional password change)
  * - Allowed fields: firstName, lastName, email, phone
@@ -572,7 +568,10 @@ const updateProfile = catchAsync(async (req: Request, res: Response) => {
 
     // email uniqueness check
     if (updates.email) {
-      const exists = await User.findOne({ email: updates.email, _id: { $ne: adminId } });
+      const exists = await User.findOne({
+        email: updates.email,
+        _id: { $ne: adminId },
+      });
       if (exists) return ResponseUtils.error(res, "Email already in use", 400);
     }
 
@@ -581,31 +580,467 @@ const updateProfile = catchAsync(async (req: Request, res: Response) => {
       const admin = await User.findById(adminId).select("+password");
       if (!admin) return ResponseUtils.error(res, "Admin not found", 404);
 
-      const match = await bcrypt.compare(String(body.currentPassword), (admin as any).password || "");
-      if (!match) return ResponseUtils.error(res, "Current password is incorrect", 400);
+      const match = await bcrypt.compare(
+        String(body.currentPassword),
+        (admin as any).password || ""
+      );
+      if (!match)
+        return ResponseUtils.error(res, "Current password is incorrect", 400);
 
       const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUND || "10", 10);
-      (admin as any).password = await bcrypt.hash(String(body.newPassword), saltRounds);
+      (admin as any).password = await bcrypt.hash(
+        String(body.newPassword),
+        saltRounds
+      );
       await admin.save();
     }
 
     // apply profile updates
     let updated = null;
     if (Object.keys(updates).length) {
-      updated = await User.findByIdAndUpdate(adminId, { $set: updates }, { new: true, runValidators: true }).select("-password -auths");
+      updated = await User.findByIdAndUpdate(
+        adminId,
+        { $set: updates },
+        { new: true, runValidators: true }
+      ).select("-password -auths");
     } else {
       updated = await User.findById(adminId).select("-password -auths");
     }
 
-    if (!updated) return ResponseUtils.error(res, "Admin profile not found", 404);
-    ResponseUtils.success(res, { admin: updated }, "Admin profile updated successfully");
+    if (!updated)
+      return ResponseUtils.error(res, "Admin profile not found", 404);
+    ResponseUtils.success(
+      res,
+      { admin: updated },
+      "Admin profile updated successfully"
+    );
   } catch (err: any) {
     console.error("Admin updateProfile error:", err);
-    ResponseUtils.error(res, err?.message || "Failed to update admin profile", 500);
+    ResponseUtils.error(
+      res,
+      err?.message || "Failed to update admin profile",
+      500
+    );
   }
 });
-// ...existing code...
 
+/**
+ * Generate admin report (writes JSON file to ./reports)
+ * POST /api/v1/admin/reports/generate
+ */
+const generateReport = catchAsync(async (req: Request, res: Response) => {
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const [
+    totalUsers,
+    totalRiders,
+    totalDrivers,
+    pendingDriverApprovals,
+    onlineDrivers,
+    totalRides,
+    completedRides,
+    revenueAgg,
+    recentRides,
+  ] = await Promise.all([
+    User.countDocuments(),
+    User.countDocuments({ role: "rider" }),
+    Driver.countDocuments(),
+    Driver.countDocuments({ approvalStatus: "pending" }),
+    Driver.countDocuments({ isOnline: true, approvalStatus: "approved" }),
+    Ride.countDocuments(),
+    Ride.countDocuments({ status: "completed" }),
+    Ride.aggregate([
+      { $match: { status: "completed", createdAt: { $gte: startOfMonth } } },
+      { $group: { _id: null, total: { $sum: "$fare.actual" } } },
+    ]),
+    Ride.find()
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .populate("riderId", "firstName lastName email")
+      .populate("driver", "firstName lastName email")
+      .lean(),
+  ]);
+
+  const totalRevenueThisMonth = revenueAgg[0]?.total || 0;
+
+  const report = {
+    generatedAt: now.toISOString(),
+    summary: {
+      totalUsers,
+      totalRiders,
+      totalDrivers,
+      pendingDriverApprovals,
+      onlineDrivers,
+      totalRides,
+      completedRides,
+      totalRevenueThisMonth,
+    },
+    recentRides,
+  };
+
+  // ensure reports directory exists
+  const reportsDir = path.join(process.cwd(), "reports");
+  await fs.mkdir(reportsDir, { recursive: true });
+
+  const fileName = `admin-report-${now
+    .toISOString()
+    .replace(/[:.]/g, "-")}.json`;
+  const filePath = path.join(reportsDir, fileName);
+
+  await fs.writeFile(filePath, JSON.stringify(report, null, 2), "utf8");
+
+  return ResponseUtils.success(
+    res,
+    { fileName, filePath, report },
+    "Admin report generated successfully"
+  );
+});
+
+
+/**
+ * GET /api/v1/admin/analytics/ride-volume?period=week|month|today
+ * Returns time-series (date => ride count) for the chosen period
+ */
+const getRideVolume = catchAsync(async (req: Request, res: Response) => {
+  const period = String(req.query.period || "week").toLowerCase();
+  const now = new Date();
+  let startDate: Date;
+
+  if (period === "today") {
+    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  } else if (period === "month") {
+    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+  } else {
+    // default = last 7 days (week)
+    const d = new Date(now);
+    d.setDate(d.getDate() - 6); // include today -> 7 days
+    startDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  }
+
+  // Aggregation: group by date string YYYY-MM-DD
+  const agg = await Ride.aggregate([
+    { $match: { createdAt: { $gte: startDate, $lte: now } } },
+    {
+      $group: {
+        _id: {
+          $dateToString: {
+            format: "%Y-%m-%d",
+            date: "$createdAt",
+            timezone: "UTC",
+          },
+        },
+        count: { $sum: 1 },
+      },
+    },
+    { $sort: { _id: 1 } },
+  ]);
+
+  // Build map for quick lookup
+  const map = new Map<string, number>();
+  agg.forEach((r: any) => map.set(r._id, r.count));
+
+  // Generate full series from startDate -> now (inclusive)
+  const series: { date: string; count: number }[] = [];
+  const cur = new Date(startDate);
+  while (cur <= now) {
+    const dateStr = cur.toISOString().slice(0, 10); // YYYY-MM-DD
+    series.push({ date: dateStr, count: map.get(dateStr) || 0 });
+    cur.setDate(cur.getDate() + 1);
+  }
+
+  return ResponseUtils.success(
+    res,
+    {
+      period,
+      startDate: startDate.toISOString(),
+      endDate: now.toISOString(),
+      series,
+    },
+    "Ride volume fetched"
+  );
+});
+
+/**
+ * GET /api/v1/admin/analytics/revenue?period=week|month|today
+ * Returns time-series revenue for the chosen period and totals
+ */
+const getRevenueAnalytics = catchAsync(async (req: Request, res: Response) => {
+  const period = String(req.query.period || "week").toLowerCase();
+  const now = new Date();
+  let startDate: Date;
+
+  if (period === "today") {
+    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  } else if (period === "month") {
+    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+  } else {
+    // last 7 days (include today)
+    const d = new Date(now);
+    d.setDate(d.getDate() - 6);
+    startDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  }
+
+  // aggregate revenue per day (UTC)
+  const agg = await Ride.aggregate([
+    {
+      $match: {
+        status: "completed",
+        createdAt: { $gte: startDate, $lte: now },
+      },
+    },
+    {
+      $group: {
+        _id: {
+          $dateToString: {
+            format: "%Y-%m-%d",
+            date: "$createdAt",
+            timezone: "UTC",
+          },
+        },
+        totalRevenue: { $sum: { $ifNull: ["$fare.actual", 0] } },
+        count: { $sum: 1 },
+      },
+    },
+    { $sort: { _id: 1 } },
+  ]);
+
+  const map = new Map<string, { totalRevenue: number; count: number }>();
+  agg.forEach((r: any) =>
+    map.set(r._id, { totalRevenue: r.totalRevenue || 0, count: r.count || 0 })
+  );
+
+  const series: { date: string; revenue: number; rides: number }[] = [];
+  const cur = new Date(startDate);
+  while (cur <= now) {
+    const dateStr = cur.toISOString().slice(0, 10);
+    const entry = map.get(dateStr) || { totalRevenue: 0, count: 0 };
+    series.push({
+      date: dateStr,
+      revenue: entry.totalRevenue,
+      rides: entry.count,
+    });
+    cur.setDate(cur.getDate() + 1);
+  }
+
+  const totalRevenue = series.reduce((s, it) => s + it.revenue, 0);
+  const totalRides = series.reduce((s, it) => s + it.rides, 0);
+
+  return ResponseUtils.success(
+    res,
+    {
+      period,
+      startDate: startDate.toISOString(),
+      endDate: now.toISOString(),
+      totalRevenue,
+      totalRides,
+      series,
+    },
+    "Revenue analytics fetched"
+  );
+});
+
+/**
+ * GET /api/v1/admin/analytics/driver-activity?period=week|month|today
+ * Returns driver activity metrics and top drivers for the period
+ */
+const getDriverActivity = catchAsync(async (req: Request, res: Response) => {
+  const period = String(req.query.period || "week").toLowerCase();
+  const now = new Date();
+  let startDate: Date;
+
+  if (period === "today") {
+    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  } else if (period === "month") {
+    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+  } else {
+    // last 7 days (include today)
+    const d = new Date(now);
+    d.setDate(d.getDate() - 6);
+    startDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  }
+
+  // parallel aggregates
+  const [
+    totalDrivers,
+    approvedDrivers,
+    onlineDrivers,
+    newDrivers,
+    ridesByDriverAgg,
+    earningsByDriverAgg,
+  ] = await Promise.all([
+    Driver.countDocuments(),
+    Driver.countDocuments({ approvalStatus: "approved" }),
+    Driver.countDocuments({ isOnline: true, approvalStatus: "approved" }),
+    Driver.countDocuments({ createdAt: { $gte: startDate } }),
+    Ride.aggregate([
+      {
+        $match: {
+          driverId: { $ne: null },
+          createdAt: { $gte: startDate, $lte: now },
+        },
+      },
+      { $group: { _id: "$driverId", rides: { $sum: 1 } } },
+      { $sort: { rides: -1 } },
+    ]),
+    Ride.aggregate([
+      {
+        $match: {
+          driverId: { $ne: null },
+          status: "completed",
+          createdAt: { $gte: startDate, $lte: now },
+        },
+      },
+      {
+        $group: {
+          _id: "$driverId",
+          earnings: { $sum: { $ifNull: ["$fare.actual", 0] } },
+        },
+      },
+      { $sort: { earnings: -1 } },
+    ]),
+  ]);
+
+  // build maps for quick lookup
+  const ridesMap = new Map<string, number>();
+  ridesByDriverAgg.forEach((r: any) =>
+    ridesMap.set(String(r._id), r.rides || 0)
+  );
+  const earningsMap = new Map<string, number>();
+  earningsByDriverAgg.forEach((r: any) =>
+    earningsMap.set(String(r._id), r.earnings || 0)
+  );
+
+  // combine driver ids and compute combined score for top ranking
+  const driverIds = Array.from(
+    new Set([...ridesMap.keys(), ...earningsMap.keys()])
+  );
+  const combined = driverIds.map((id) => ({
+    driverId: id,
+    rides: ridesMap.get(id) || 0,
+    earnings: earningsMap.get(id) || 0,
+    score: (ridesMap.get(id) || 0) * 1 + (earningsMap.get(id) || 0) / 1000, // simple weighting
+  }));
+  combined.sort((a, b) => b.score - a.score);
+  const topN = 5;
+  const topDriversSlice = combined.slice(0, topN);
+  const topDriverIds = topDriversSlice
+    .map((d) => {
+      try {
+        return new (mongoose as any).Types.ObjectId(String(d.driverId));
+      } catch {
+        return null;
+      }
+    })
+    .filter((id) => id !== null) as unknown as mongoose.Types.ObjectId[];
+
+  // fetch driver profiles with user info
+  const topDrivers = await Driver.find({ _id: { $in: topDriverIds } })
+    .populate("userId", "firstName lastName email phone")
+    .lean();
+
+  // map driver profile by id for ordering
+  const topDriverMap = new Map(topDrivers.map((d: any) => [String(d._id), d]));
+
+  const topDriversResult = topDriversSlice.map((d) => ({
+    driverId: d.driverId,
+    rides: d.rides,
+    earnings: d.earnings,
+    profile: topDriverMap.get(d.driverId) || null,
+  }));
+
+  const avgRidesPerActiveDriver =
+    ridesByDriverAgg.reduce((s: number, r: any) => s + (r.rides || 0), 0) /
+      Math.max(1, ridesByDriverAgg.length) || 0;
+
+  return ResponseUtils.success(
+    res,
+    {
+      period,
+      startDate: startDate.toISOString(),
+      endDate: now.toISOString(),
+      overview: {
+        totalDrivers,
+        approvedDrivers,
+        onlineDrivers,
+        newDrivers,
+        driversWithRides: ridesByDriverAgg.length,
+        avgRidesPerActiveDriver: Number(avgRidesPerActiveDriver.toFixed(2)),
+      },
+      topDrivers: topDriversResult,
+    },
+    "Driver activity analytics fetched"
+  );
+});
+
+
+
+
+/**
+ * GET /api/v1/admin/analytics/status-distribution?period=week|month|today
+ * Returns counts and percentages per ride status for the period
+ */
+const getStatusDistribution = catchAsync(async (req: Request, res: Response) => {
+  const period = String(req.query.period || "week").toLowerCase();
+  const now = new Date();
+  let startDate: Date;
+
+  if (period === "today") {
+    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  } else if (period === "month") {
+    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+  } else {
+    const d = new Date(now);
+    d.setDate(d.getDate() - 6); // last 7 days incl today
+    startDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  }
+
+  // aggregate counts by status
+  const agg = await Ride.aggregate([
+    { $match: { createdAt: { $gte: startDate, $lte: now } } },
+    {
+      $group: {
+        _id: "$status",
+        count: { $sum: 1 },
+      },
+    },
+  ]);
+
+  const total = agg.reduce((s: number, a: any) => s + (a.count || 0), 0);
+
+  // ensure all statuses present with 0 if missing
+  const allStatuses = [
+    "requested",
+    "accepted",
+    "picked_up",
+    "in_transit",
+    "completed",
+    "cancelled",
+    "rejected",
+    "waitlist",
+  ];
+
+  const map = new Map<string, number>();
+  agg.forEach((a: any) => map.set(String(a._id), a.count || 0));
+
+  const distribution = allStatuses.map((status) => {
+    const count = map.get(status) || 0;
+    const percent = total > 0 ? Number(((count / total) * 100).toFixed(2)) : 0;
+    return { status, count, percent };
+  });
+
+  return ResponseUtils.success(
+    res,
+    {
+      period,
+      startDate: startDate.toISOString(),
+      endDate: now.toISOString(),
+      totalRides: total,
+      distribution,
+    },
+    "Status distribution fetched"
+  );
+});
 
 
 export const AdminController = {
@@ -624,6 +1059,9 @@ export const AdminController = {
   getProfile,
   getAllRiders,
   updateProfile,
+  generateReport,
+  getRideVolume,
+  getRevenueAnalytics,
+  getDriverActivity,
+  getStatusDistribution,
 };
-
-

@@ -1,0 +1,153 @@
+{
+  "generatedAt": "2025-10-30T09:55:27.034Z",
+  "summary": {
+    "totalUsers": 9,
+    "totalRiders": 3,
+    "totalDrivers": 3,
+    "pendingDriverApprovals": 0,
+    "onlineDrivers": 1,
+    "totalRides": 2,
+    "completedRides": 1,
+    "totalRevenueThisMonth": 0
+  },
+  "recentRides": [
+    {
+      "_id": "690255d88dc10190418873c0",
+      "riderId": {
+        "_id": "6901b1c686de3e249590ad65",
+        "firstName": "Hasan",
+        "lastName": "mia",
+        "email": "hasan.rider@gmail.com"
+      },
+      "driverId": null,
+      "driverProfileId": null,
+      "pickupLocation": {
+        "address": "456 Oak Ave, City",
+        "coordinates": {
+          "type": "Point",
+          "coordinates": [
+            -74.012,
+            40.7589
+          ]
+        }
+      },
+      "destination": {
+        "address": "123 Main St, City",
+        "coordinates": {
+          "type": "Point",
+          "coordinates": [
+            -74.006,
+            40.7128
+          ]
+        }
+      },
+      "status": "completed",
+      "rideType": "economy",
+      "paymentMethod": "cash",
+      "paymentStatus": "pending",
+      "fare": {
+        "estimated": 153,
+        "actual": null
+      },
+      "distance": {
+        "estimated": 5.15,
+        "actual": null
+      },
+      "duration": {
+        "estimated": 10,
+        "actual": null
+      },
+      "timeline": {
+        "accepted": null,
+        "pickedUp": null,
+        "inTransit": null,
+        "completed": null,
+        "cancelled": null,
+        "requested": "2025-10-29T17:58:48.456Z"
+      },
+      "cancellationReason": null,
+      "cancelledBy": null,
+      "rating": {
+        "riderRating": null,
+        "driverRating": null
+      },
+      "feedback": {
+        "riderComment": null,
+        "driverComment": null
+      },
+      "createdAt": "2025-10-29T17:58:48.460Z",
+      "updatedAt": "2025-10-29T20:00:30.771Z",
+      "__v": 0,
+      "driver": null
+    },
+    {
+      "_id": "68fd095421153e67a0575468",
+      "riderId": null,
+      "driverId": "68fd27eb81ab507a8a2a7887",
+      "driverProfileId": null,
+      "pickupLocation": {
+        "address": "123 Main St",
+        "coordinates": {
+          "type": "Point",
+          "coordinates": [
+            -74.006,
+            40.7128
+          ]
+        }
+      },
+      "destination": {
+        "address": "456 Oak Ave",
+        "coordinates": {
+          "type": "Point",
+          "coordinates": [
+            -74.012,
+            40.7589
+          ]
+        }
+      },
+      "status": "accepted",
+      "rideType": "economy",
+      "paymentMethod": "cash",
+      "paymentStatus": "pending",
+      "fare": {
+        "estimated": 153,
+        "actual": null
+      },
+      "distance": {
+        "estimated": 5.15,
+        "actual": null
+      },
+      "duration": {
+        "estimated": 10,
+        "actual": null
+      },
+      "timeline": {
+        "accepted": null,
+        "pickedUp": null,
+        "inTransit": null,
+        "completed": null,
+        "cancelled": null,
+        "requested": "2025-10-25T17:31:00.040Z"
+      },
+      "cancellationReason": null,
+      "cancelledBy": null,
+      "rating": {
+        "riderRating": 4,
+        "driverRating": null
+      },
+      "feedback": {
+        "riderComment": "Very good driver!",
+        "driverComment": null
+      },
+      "createdAt": "2025-10-25T17:31:00.055Z",
+      "updatedAt": "2025-10-26T12:45:31.174Z",
+      "__v": 0,
+      "driver": {
+        "_id": "68fd27eb81ab507a8a2a7887",
+        "firstName": "kabir",
+        "lastName": "ahmed",
+        "email": "kabir.driver@gmail.com"
+      }
+    }
+  ]
+}

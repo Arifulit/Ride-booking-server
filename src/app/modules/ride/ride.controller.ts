@@ -6,7 +6,7 @@ import RideService from "./ride.service";
 import ResponseUtils from "../../utils/response";
 import { catchAsync } from "../../utils/catchAsync";
 import User from "../user/user.model";
-// ...existing code...
+
 
 
 // Rider: Get My Rides
@@ -472,7 +472,7 @@ const getActiveRides = catchAsync(async (req: Request, res: Response) => {
 });
 
 
-// ...existing code...
+
 const getRideHistory = catchAsync(async (req, res) => {
   const userId = (req as any).user?._id;
   const page = Math.max(parseInt(String(req.query.page || "1"), 10), 1);
@@ -506,6 +506,81 @@ const getRideHistory = catchAsync(async (req, res) => {
 });
 
 
+
+
+/**
+ * GET /api/v1/rider/rides
+ * Returns paginated rides for authenticated rider
+ * Query params:
+ *  - page, limit
+ *  - status (single or comma separated)
+ *  - from (ISO date), to (ISO date)
+ *  - sort (e.g. createdAt,-status)
+ */
+const getRiderRides = catchAsync(async (req: Request, res: Response) => {
+  const riderId = (req as any).user?._id;
+  if (!riderId) return ResponseUtils.error(res, "Unauthenticated", 401);
+
+  // pagination
+  const page = Math.max(parseInt(String(req.query.page || "1"), 10) || 1, 1);
+  const limit = Math.min(Math.max(parseInt(String(req.query.limit || "10"), 10) || 10, 1), 100);
+  const skip = (page - 1) * limit;
+
+  // filters
+  const filter: any = { riderId };
+
+  // status filter: accept comma separated or single
+  if (req.query.status) {
+    const raw = String(req.query.status).trim();
+    if (raw.includes(",")) filter.status = { $in: raw.split(",").map((s) => s.trim()) };
+    else filter.status = raw;
+  }
+
+  // date range filter
+  if (req.query.from || req.query.to) {
+    filter.createdAt = {};
+    if (req.query.from) {
+      const fromDate = new Date(String(req.query.from));
+      if (!isNaN(fromDate.getTime())) filter.createdAt.$gte = fromDate;
+    }
+    if (req.query.to) {
+      const toDate = new Date(String(req.query.to));
+      if (!isNaN(toDate.getTime())) filter.createdAt.$lte = toDate;
+    }
+    // if createdAt ended up empty, remove it
+    if (Object.keys(filter.createdAt).length === 0) delete filter.createdAt;
+  }
+
+  // sorting
+  const sortQuery = String(req.query.sort || "-createdAt");
+
+  const [total, items] = await Promise.all([
+    Ride.countDocuments(filter),
+    Ride.find(filter)
+      .sort(sortQuery)
+      .skip(skip)
+      .limit(limit)
+      .populate({ path: "driverId", select: "firstName lastName phone profilePicture" })
+      .populate({ path: "driverProfileId", select: "vehicleInfo licenseNumber" })
+      .lean(),
+  ]);
+
+  const meta = {
+    currentPage: page,
+    totalPages: Math.max(1, Math.ceil(total / limit)),
+    totalItems: total,
+    hasNext: page * limit < total,
+    hasPrev: page > 1,
+  };
+
+  return ResponseUtils.paginated(res, items, meta, "Rider rides fetched");
+});
+
+
+
+
+ 
+
 export const RideController = {
   getMyRides,
   cancelRide,
@@ -522,5 +597,6 @@ export const RideController = {
   getPendingRides,
    getAllRiders,
   getActiveRides,
-  getRideHistory
+  getRideHistory,
+   getRiderRides, 
 };

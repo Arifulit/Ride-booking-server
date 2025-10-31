@@ -112,80 +112,6 @@ const register = catchAsync(
 /**
  * Login user
  */
-// const login = catchAsync(
-//   async (
-//     req: Request<{}, AuthResponse, LoginRequestBody>,
-//     res: Response<any>,
-//     next: NextFunction
-//   ) => {
-//     const { email, password } = req.body;
-//     // console.log("Login request:", { email, password });
-
-//     // Find user by email
-//     const user = (await User.findOne({ email }).select("+password")) as any;
-
-//     // console.log("User found:", user);
-
-//     if (!user) {
-//       return ResponseUtils.error(res, "Invalid email or password", 401);
-//     }
-
-//     // console.log("Hashed password from DB:", user.password);
-//     // Check if user is blocked
-//     if (user.isBlocked) {
-//       return ResponseUtils.error(
-//         res,
-//         "Account has been blocked. Contact support.",
-//         403
-//       );
-//     }
-
-//     // Verify password
-//     const isPasswordValid: boolean = await user.checkPassword(password);
-
-//     // console.log("Password valid:", isPasswordValid);
-
-//     if (!isPasswordValid) {
-//       return ResponseUtils.error(res, "Invalid email or password", 401);
-//     }
-
-//     // Generate tokens
-//     const tokens = authService.generateTokens(user);
-
-//     // Update last login
-//     user.lastLogin = new Date();
-//     await user.save();
-
-//     // Get additional info for drivers
-//     let additionalData: { driverProfile?: IDriver } = {};
-//     if (user.role === "driver") {
-//       const driverProfile = (await Driver.findOne({
-//         userId: user._id,
-//       })) as any;
-//       if (driverProfile) {
-//         additionalData.driverProfile = driverProfile;
-//       }
-//     }
-
-//     ResponseUtils.success(
-//       res,
-//       {
-//         user: user.getPublicProfile(),
-//         tokens,
-//         ...additionalData,
-//       },
-//       "Login successful"
-//     );
-//   }
-// );
-
-
-
-// ...existing code...
-
-// ...existing code...
-
-// ...existing code...
 
 const login = catchAsync(
   async (
@@ -251,10 +177,6 @@ const login = catchAsync(
     );
   }
 );
-// ...existing code...
-
-
-
 
 /**
  * Logout user
@@ -316,12 +238,43 @@ const updateProfile = catchAsync(
   }
 );
 
+
+const changePassword = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const userId = (req as any).user?._id;
+    if (!userId) return ResponseUtils.error(res, "Unauthenticated", 401);
+
+    const { oldPassword, newPassword } = req.body || {};
+    if (!oldPassword || !newPassword) {
+      return ResponseUtils.error(res, "oldPassword and newPassword are required", 400);
+    }
+
+    const user = (await User.findById(userId).select("+password")) as any;
+    if (!user) return ResponseUtils.error(res, "User not found", 404);
+
+    const isMatch = await bcrypt.compare(String(oldPassword), (user as any).password || "");
+    if (!isMatch) return ResponseUtils.error(res, "Current password is incorrect", 400);
+
+    const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUND || "10", 10);
+    user.password = await bcrypt.hash(String(newPassword), saltRounds);
+    await user.save();
+
+    // do not return password
+    ResponseUtils.success(res, null, "Password changed successfully");
+  }
+);
+
+
+
+
+
 const AuthController = {
   register,
   login,
   logout,
   getProfile,
   updateProfile,
+  changePassword,
 };
 
 export default AuthController;
