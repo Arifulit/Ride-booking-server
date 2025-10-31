@@ -11,12 +11,20 @@ const app: Application = express();
 // Security
 app.use(helmet()); // Secure HTTP headers
 
-// CORS: allow frontend URL or all in development
-app.use(cors({
-  origin: process.env.FRONTEND_URL || "https://ride-booking-client-bay.vercel.app" || "http://localhost:5173", // fallback for dev
-  credentials: true,
-}));
+// CORS: allow frontend URL(s) or all in development
+const rawOrigins = process.env.CORS_ORIGINS || process.env.FRONTEND_URL || "http://localhost:5173,https://ride-booking-client-bay.vercel.app";
+const allowedOrigins = rawOrigins.split(",").map(s => s.trim()).filter(Boolean);
 
+app.use(cors({
+  origin: (origin, callback) => {
+    // allow non-browser requests like Postman (no origin)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error("Not allowed by CORS"));
+  },
+  credentials: true,
+  optionsSuccessStatus: 200,
+}));
 // Rate Limiting
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || "900000"), // 15 minutes
