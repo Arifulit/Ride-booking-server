@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 // import express, { Application, Request, Response } from "express";
 // import cors from "cors";
 // import helmet from "helmet";
@@ -104,7 +105,6 @@
 // app.use(errorHandler); // Global error handler
 
 // export default app;
-
 import express, { Application, Request, Response, NextFunction } from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -119,6 +119,7 @@ const app: Application = express();
 app.use(helmet()); // Secure HTTP headers
 
 /* ---------------- CORS Configuration ---------------- */
+// Allowed origins can be provided as comma-separated env var (CORS_ORIGINS) or single FRONTEND_URL
 const rawOrigins =
   process.env.CORS_ORIGINS ||
   process.env.FRONTEND_URL ||
@@ -129,24 +130,30 @@ const allowedOrigins = rawOrigins
   .map((s) => s.trim())
   .filter(Boolean);
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true); // Allow Postman or server-side
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      console.warn("❌ CORS blocked origin:", origin);
-      return callback(new Error("Not allowed by CORS"));
-    },
-    credentials: true,
-    optionsSuccessStatus: 200,
-  })
-);
+/**
+ * origin callback: allow requests with no origin (Postman/server-to-server),
+ * allow when origin exactly matches allowedOrigins otherwise reject.
+ */
+const corsOptions = {
+  origin: (origin: any, callback: (err: Error | null, allow?: boolean) => void) => {
+    if (!origin) return callback(null, true); // allow non-browser requests
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    console.warn("❌ CORS blocked origin:", origin);
+    return callback(new Error("Not allowed by CORS"));
+  },
+  credentials: true,
+  optionsSuccessStatus: 200,
+};
+
+app.use(cors(corsOptions));
+// Ensure preflight (OPTIONS) is handled for all routes
+app.options("*", cors(corsOptions));
 
 /* ---------------- Rate Limiting ---------------- */
 const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || "900000"), // 15 min
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "100"), // limit per IP
-  message: { error: "Too many requests from this IP, try again later." },
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || "900000", 10), // default 15 min
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "100", 10), // default 100 requests per window
+  message: { success: false, message: "Too many requests from this IP, try again later." },
 });
 app.use("/api", limiter);
 
@@ -164,16 +171,10 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   const isEntityParseFailed = err && err.type === "entity.parse.failed";
   const isSyntaxError = err instanceof SyntaxError && "body" in err;
   const isEmptyBodyError =
-    err &&
-    typeof err.message === "string" &&
-    /Unexpected end of JSON input/i.test(err.message);
+    err && typeof err.message === "string" && /Unexpected end of JSON input/i.test(err.message);
   const safeMethods = ["GET", "HEAD", "DELETE"];
 
-  if (
-    (isEntityParseFailed || isSyntaxError) &&
-    isEmptyBodyError &&
-    safeMethods.includes(req.method)
-  ) {
+  if ((isEntityParseFailed || isSyntaxError) && isEmptyBodyError && safeMethods.includes(req.method)) {
     (req as any).body = {};
     return next();
   }
@@ -187,7 +188,7 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
     });
   }
 
-  next(err);
+  return next(err);
 });
 
 /* ---------------- Base Routes ---------------- */
