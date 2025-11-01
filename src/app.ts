@@ -13,7 +13,7 @@ const app: Application = express();
 app.use(helmet()); // Secure HTTP headers
 
 // CORS: allow frontend URL(s) or all in development
-const rawOrigins = process.env.CORS_ORIGINS || process.env.FRONTEND_URL || "http://localhost:5173,https://ride-booking-client-bay.vercel.app";
+const rawOrigins = process.env.CORS_ORIGINS || process.env.FRONTEND_URL || "http://localhost:5173,https://ride-booking-client-one.vercel.app";
 const allowedOrigins = rawOrigins.split(",").map(s => s.trim()).filter(Boolean);
 
 app.use(cors({
@@ -105,7 +105,7 @@ app.use(notFound); // 404 middleware
 app.use(errorHandler); // Global error handler
 
 
-
+export default app;
 
 
 
