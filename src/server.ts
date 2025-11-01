@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
-import app from "./app";
+import * as appModule from "./app";
+const app = (appModule as any).default || appModule;
 import { connectRedis } from "./app/config/redis.config";
 
 // Load environment variables
