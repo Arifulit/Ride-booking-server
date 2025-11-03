@@ -1,7 +1,6 @@
 // import { redisClient } from "../../config/redis.config";
 import { createClient } from "redis";
 import { envVars } from "./env";
-// import { envVars } from './env';
 
 export const redisClient = createClient({
     username: envVars.REDIS_USERNAME,
@@ -13,12 +12,6 @@ export const redisClient = createClient({
 });
 
 redisClient.on("error", (err: unknown) => console.log("Redis Client Error", err));
-
-
-
-// await client.set('foo', 'bar');
-// const result = await client.get('foo');
-// console.log(result)  // >>> bar
 
 
 export const connectRedis = async () => {

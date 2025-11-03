@@ -135,9 +135,7 @@ const login = catchAsync(
       return ResponseUtils.error(res, "Invalid email or password", 401);
     }
 
-    // debug info (safe: don't log raw passwords)
-    // console.log("[LOGIN] found user:", { email: user.email, id: user._id?.toString(), hasPassword: !!user.password });
-
+ 
     if (user.isBlocked) {
       return ResponseUtils.error(res, "Account has been blocked. Contact support.", 403);
     }

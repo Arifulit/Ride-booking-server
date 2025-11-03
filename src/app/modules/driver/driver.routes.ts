@@ -109,5 +109,12 @@ router.get(
   (req: Request, res: Response, next: NextFunction) =>
     DriverController.getRidersList(req, res, next)
 );
+// GET /api/v1/drivers/analytics?period=week
+router.get(
+  "/analytics",
+  authorize(["driver"]),
+   (req: Request, res: Response, next: NextFunction) =>
+  DriverController.getAnalytics(req, res, next)
+);
 
 export const DriverRoutes = router;

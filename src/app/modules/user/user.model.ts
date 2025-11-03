@@ -85,24 +85,6 @@ userSchema.methods.getPublicProfile = function (this: IUser) {
 };
 
 
-
-
-// ...existing schema definition...
-// userSchema.pre("save", async function (next) {
-//   // only hash if password field is new or modified
-//   if (!this.isModified("password")) return next();
-//   const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUND || "10", 10);
-//   try {
-//     const hashed = await bcrypt.hash(this.password, saltRounds);
-//     this.password = hashed;
-//     next();
-//   } catch (err) {
-//     next(err as any);
-//   }
-// });
-
-
-
 const User: Model<IUser> = mongoose.model<IUser>("User", userSchema);
 export { User };
 export default User;

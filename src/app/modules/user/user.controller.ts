@@ -47,8 +47,6 @@ const getRideHistory = catchAsync(async (req: Request, res: Response) => {
 });
 
 
-
-
 /**
  * Get rider profile with summary
  */
@@ -88,11 +86,6 @@ const getProfile = catchAsync(async (req: Request, res: Response) => {
     "Rider profile and summary"
   );
 });
-
-
-
-
-
 
 
 /**
@@ -140,31 +133,11 @@ const updateProfile = catchAsync(async (req: Request, res: Response) => {
 });
 
 
-// const changePassword = catchAsync(async (req: Request, res: Response) => {
-//   const userId = (req as any).user?._id;
-//   if (!userId) return ResponseUtils.error(res, "Unauthenticated", 401);
-
-//   const { currentPassword, newPassword } = req.body || {};
-//   if (!currentPassword || !newPassword)
-//     return ResponseUtils.error(res, "currentPassword and newPassword required", 400);
-
-//   const user = await User.findById(userId).select("+password");
-//   if (!user) return ResponseUtils.error(res, "User not found", 404);
-
-//   const match = await bcrypt.compare(String(currentPassword), (user as any).password || "");
-//   if (!match) return ResponseUtils.error(res, "Current password is incorrect", 400);
-
-//   const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUND || "10", 10);
-//   user.password = await bcrypt.hash(String(newPassword), saltRounds);
-//   await user.save();
-
-//   ResponseUtils.success(res, null, "Password updated successfully");
-// });
 
 export const UserController = {
   getProfile,
   getAllUsers,
   updateProfile,
   getRideHistory,
-  // changePassword,
+
 };

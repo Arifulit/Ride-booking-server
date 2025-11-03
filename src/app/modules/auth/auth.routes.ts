@@ -2,11 +2,9 @@ import { Router } from "express";
 import AuthController from "./auth.controller";
 import { validateBody } from "../../middlewares/validation.middleware";
 import { authenticate } from "../../middlewares/auth.middleware";
-
 // Import validation schemas
 import registerSchema from "./schemas/register.schema";
 import loginSchema from "./schemas/login.schema";
-
 const router = Router();
 
 //  Public routes - No authentication required

@@ -427,8 +427,108 @@ const updateOnlineStatus = catchAsync(async (req: Request, res: Response) => {
 });
 
 
+const getAnalytics = catchAsync(async (req: Request, res: Response) => {
+  const userId = (req as any).user?._id;
+  if (!userId) return ResponseUtils.error(res, "Unauthenticated", 401);
 
+  const period = String(req.query.period || "week").toLowerCase();
 
+  const now = new Date();
+  let startDate = new Date(now);
+
+  // determine start date and date format for grouping
+  let dateFormat = "%Y-%m-%d";
+  switch (period) {
+    case "day":
+      startDate.setHours(0, 0, 0, 0);
+      dateFormat = "%Y-%m-%dT%H:00:00";
+      break;
+    case "week":
+      startDate.setDate(now.getDate() - 7);
+      startDate.setHours(0, 0, 0, 0);
+      dateFormat = "%Y-%m-%d";
+      break;
+    case "month":
+      startDate.setMonth(now.getMonth() - 1);
+      startDate.setHours(0, 0, 0, 0);
+      dateFormat = "%Y-%m-%d";
+      break;
+    case "year":
+      startDate.setFullYear(now.getFullYear() - 1);
+      startDate.setHours(0, 0, 0, 0);
+      dateFormat = "%Y-%m";
+      break;
+    default:
+      // fallback to week
+      startDate.setDate(now.getDate() - 7);
+      startDate.setHours(0, 0, 0, 0);
+      dateFormat = "%Y-%m-%d";
+  }
+
+  const match: any = {
+    driverId: userId,
+    createdAt: { $gte: startDate, $lte: now },
+  };
+
+  const aggregation = await Ride.aggregate([
+    { $match: match },
+    {
+      $group: {
+        _id: { $dateToString: { format: dateFormat, date: "$createdAt" } },
+        totalRides: { $sum: 1 },
+        completedRides: {
+          $sum: {
+            $cond: [{ $eq: ["$status", "completed"] }, 1, 0],
+          },
+        },
+        totalEarnings: { $sum: { $ifNull: ["$fare.actual", 0] } },
+        avgFare: { $avg: { $ifNull: ["$fare.actual", 0] } },
+      },
+    },
+    { $sort: { _id: 1 } },
+  ]);
+
+  // compute totals
+  const totals = aggregation.reduce(
+    (acc, cur) => {
+      acc.totalRides += cur.totalRides || 0;
+      acc.completedRides += cur.completedRides || 0;
+      acc.totalEarnings += cur.totalEarnings || 0;
+      return acc;
+    },
+    { totalRides: 0, completedRides: 0, totalEarnings: 0 }
+  );
+
+  const avgFareOverall =
+    aggregation.length > 0
+      ? aggregation.reduce((s, c) => s + (c.avgFare || 0), 0) / aggregation.length
+      : 0;
+
+  const series = aggregation.map((item) => ({
+    period: item._id,
+    totalRides: item.totalRides,
+    completedRides: item.completedRides,
+    totalEarnings: item.totalEarnings,
+    avgFare: item.avgFare,
+  }));
+
+  ResponseUtils.success(
+    res,
+    {
+      period,
+      from: startDate.toISOString(),
+      to: now.toISOString(),
+      totals: {
+        totalRides: totals.totalRides,
+        completedRides: totals.completedRides,
+        totalEarnings: totals.totalEarnings,
+        avgFareOverall: Number(avgFareOverall.toFixed(2)),
+      },
+      series,
+    },
+    "Driver analytics retrieved"
+  );
+});
 
 
 export const DriverController = {
@@ -443,6 +543,7 @@ export const DriverController = {
   getDetailedEarnings,
   getRidersList,
   updateOnlineStatus,
+  getAnalytics,
   
  
 };

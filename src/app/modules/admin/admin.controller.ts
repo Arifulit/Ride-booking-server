@@ -550,8 +550,6 @@ const getAllRiders = catchAsync(async (req: Request, res: Response) => {
 
 /**
  * Update admin profile (only profile fields + optional password change)
- * - Allowed fields: firstName, lastName, email, phone
- * - To change password provide currentPassword and newPassword in body
  */
 const updateProfile = catchAsync(async (req: Request, res: Response) => {
   try {
@@ -700,7 +698,6 @@ const generateReport = catchAsync(async (req: Request, res: Response) => {
 
 /**
  * GET /api/v1/admin/analytics/ride-volume?period=week|month|today
- * Returns time-series (date => ride count) for the chosen period
  */
 const getRideVolume = catchAsync(async (req: Request, res: Response) => {
   const period = String(req.query.period || "week").toLowerCase();
