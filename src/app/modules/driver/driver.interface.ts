@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 // driver.interface.ts
 import { Document, Types } from "mongoose";
 

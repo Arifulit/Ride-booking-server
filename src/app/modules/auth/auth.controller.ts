@@ -1,3 +1,5 @@
+/* eslint-disable no-unused-vars */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Request, Response, NextFunction } from "express";
 import type { IUser } from "../user/user.interface";
 import Driver from "../driver/driver.model";
@@ -6,8 +8,6 @@ import authService from "./auth.service";
 import ResponseUtils from "../../utils/response";
 import User from "../user/user.model";
 import { catchAsync } from "../../utils/catchAsync";
-import AppError from "../../errorHelpers/AppError";
-import passport from "passport";
 import bcrypt from "bcryptjs";
 // Interface definitions for request bodies
 interface RegisterRequestBody {
@@ -60,8 +60,7 @@ interface ProfileResponse {
 const register = catchAsync(
   async (
     req: Request<{}, AuthResponse, RegisterRequestBody>,
-    res: Response<any>,
-    next: NextFunction
+    res: Response<any>
   ) => {
     const { role, licenseNumber, vehicleInfo, ...userData } = req.body;
 

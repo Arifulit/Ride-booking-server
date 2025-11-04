@@ -1,10 +1,10 @@
-import { Request, Response, NextFunction } from "express";
+import { Request, Response } from "express";
 import ResponseUtils from "../utils/response";
 
 /**
  * Handle 404 Not Found errors
  */
-export const notFound = (req: Request, res: Response, next: NextFunction) => {
+export const notFound = (req: Request, res: Response) => {
   ResponseUtils.error(res, `Route ${req.originalUrl} not found`, 404);
 };
 
@@ -14,9 +14,7 @@ export const notFound = (req: Request, res: Response, next: NextFunction) => {
 export const errorHandler = (
   err: any,
   req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+  res: Response) => {
   console.error("Error:", err);
 
   // Mongoose validation error

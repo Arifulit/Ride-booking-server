@@ -1,7 +1,8 @@
+/* eslint-disable no-unused-vars */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 
 import { Request, Response } from "express";
 import Driver from "./driver.model";
-import { IDriver } from "./driver.interface";
 import Ride from "../ride/ride.model";
 import ResponseUtils from "../../utils/response";
 import { catchAsync } from "../../utils/catchAsync";

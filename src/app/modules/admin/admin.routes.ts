@@ -3,7 +3,6 @@ import { authenticate } from "../../middlewares/auth.middleware";
 import { authorize } from "../../middlewares/role.middleware";
 import { AdminController } from "./admin.controller";
 import path from "path";
-
 const router = Router();
 
 // Auth + admin role for all following routes

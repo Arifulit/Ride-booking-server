@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable no-unused-vars */
 import bcryptjs from "bcryptjs";
 import passport from "passport";
 import { Strategy as GoogleStrategy, Profile, VerifyCallback } from "passport-google-oauth20";
@@ -131,8 +131,8 @@ passport.use(
 );
 
 // Serialize & Deserialize
-passport.serializeUser((user: any, done: (err: any, id?: unknown) => void) => {
-  done(null, user._id);
+passport.serializeUser((user: any, done: (id?: unknown) => void) => {
+  done(user._id);
 });
 
 passport.deserializeUser(async (id: string, done: any) => {
