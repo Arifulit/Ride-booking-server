@@ -329,13 +329,14 @@ const getAllRides = catchAsync(
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
 
-    const rides: IRide[] = await Ride.find(query)
+    const rides: IRide[] = (await Ride.find(query)
       .populate("riderId", "firstName lastName email phone")
       .populate("driver", "firstName lastName email phone")
       .populate("driverProfile", "vehicleInfo rating")
       .sort({ createdAt: -1 })
       .limit(limitNum)
-      .skip((pageNum - 1) * limitNum);
+      .skip((pageNum - 1) * limitNum)
+      .lean()) as unknown as IRide[];
 
     const total: number = await Ride.countDocuments(query);
 
