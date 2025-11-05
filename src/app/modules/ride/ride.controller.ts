@@ -6,6 +6,7 @@ import RideService from "./ride.service";
 import ResponseUtils from "../../utils/response";
 import { catchAsync } from "../../utils/catchAsync";
 import User from "../user/user.model";
+import Driver from "../driver/driver.model";
 
 
 
@@ -105,7 +106,6 @@ const requestRide = catchAsync(async (req: Request, res: Response) => {
 
 
 // Driver: Accept Ride
-
 const acceptRide = catchAsync(async (req: Request, res: Response) => {
   const { rideId } = req.params;
   const driverIdRaw = req.user?._id;
@@ -147,10 +147,7 @@ const acceptRide = catchAsync(async (req: Request, res: Response) => {
 });
 
 
-
-
 // Driver: Reject Ride
-
 const rejectRide = catchAsync(async (req: Request, res: Response) => {
   const { rideId } = req.params;
   const ride = await Ride.findById(rideId);
@@ -162,6 +159,10 @@ const rejectRide = catchAsync(async (req: Request, res: Response) => {
   await ride.save();
   ResponseUtils.success(res, { ride }, "Ride rejected successfully");
 });
+
+
+
+
 
 
 // Driver: Update Ride Status

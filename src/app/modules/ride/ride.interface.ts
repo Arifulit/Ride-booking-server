@@ -1,3 +1,4 @@
+
 import { Types } from "mongoose";
 
 export type RideStatus =
@@ -24,9 +25,10 @@ export interface Location {
 
 export interface IRide {
   [x: string]: any;
-  riderId: Types.ObjectId;
-  driverId?: Types.ObjectId | null;
-  driverProfileId?: Types.ObjectId | null;
+  _id?: Types.ObjectId | string;
+  riderId: Types.ObjectId | string;
+  driverId?: Types.ObjectId | string | null;
+  driverProfileId?: Types.ObjectId | string | null;
   pickupLocation: Location;
   destination: Location;
   status: RideStatus;
@@ -49,4 +51,7 @@ export interface IRide {
   notes?: string;
   rating?: { riderRating?: number | null; driverRating?: number | null };
   feedback?: { riderComment?: string | null; driverComment?: string | null };
+  createdAt?: Date;
+  updatedAt?: Date;
 }
+// ...existing code...

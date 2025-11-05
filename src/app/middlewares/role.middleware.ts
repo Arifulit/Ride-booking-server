@@ -1,3 +1,4 @@
+
 import { Request, Response, NextFunction } from "express";
 import ResponseUtils from "../utils/response";
 import Driver from "../modules/driver/driver.model";
@@ -40,10 +41,9 @@ export const requireApprovedDriver = async (
       return;
     }
 
-    const driver = await Driver.findOne({ userId: req.user.id });
-    console.log("Request: ", req.user);
+    const driver = await Driver.findOne({ userId: req.user._id });
     if (!driver) {
-      ResponseUtils.error(res, "Driver profile not found MIDD", 404);
+      ResponseUtils.error(res, "Driver profile not found", 404);
       return;
     }
 

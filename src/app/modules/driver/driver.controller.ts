@@ -127,7 +127,6 @@ const updateAvailability = catchAsync(async (req: Request, res: Response) => {
 });
 
 
-
 /**
  * Update driver current location
  */

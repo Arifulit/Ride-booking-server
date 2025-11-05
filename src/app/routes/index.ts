@@ -26,10 +26,10 @@ const moduleRoutes: ModuleRoute[] = [
     route: DriverRoutes,
   },
   // support singular '/driver' prefix for driver clients
-  {
-    path: "/driver",
-    route: DriverRoutes,
-  },
+  // {
+  //   path: "/driver",
+  //   route: DriverRoutes,
+  // },
   {
     path: "/rides",
     route: RideRoutes,
