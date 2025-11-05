@@ -54,4 +54,3 @@ export interface IRide {
   createdAt?: Date;
   updatedAt?: Date;
 }
-// ...existing code...

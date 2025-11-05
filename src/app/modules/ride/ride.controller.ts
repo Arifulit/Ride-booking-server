@@ -6,7 +6,6 @@ import RideService from "./ride.service";
 import ResponseUtils from "../../utils/response";
 import { catchAsync } from "../../utils/catchAsync";
 import User from "../user/user.model";
-import Driver from "../driver/driver.model";
 
 
 

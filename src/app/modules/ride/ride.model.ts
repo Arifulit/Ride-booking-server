@@ -7,7 +7,7 @@ import { IRide, RideStatus, RideType } from "./ride.interface";
 /**
  * Document Interface (instance methods)
  */
-export interface IRideDocument extends IRide, Document {
+export interface IRideDocument extends Omit<IRide, "_id">, Document {
   canBeCancelled(): boolean;
   updateStatus(
     newStatus: RideStatus,
