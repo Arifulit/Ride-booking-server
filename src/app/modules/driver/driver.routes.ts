@@ -77,6 +77,8 @@ router.get(
   (req: Request, res: Response, next: NextFunction) =>
     RideController.getAllRideRequests(req, res, next)
 );
+
+
 router.get(
   "/rides/active",
   authorize(["driver"]),

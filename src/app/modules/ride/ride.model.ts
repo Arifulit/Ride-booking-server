@@ -3,7 +3,6 @@
 import { Schema, model, Model, Document } from "mongoose";
 import mongoosePaginate from "mongoose-paginate-v2";
 import { IRide, RideStatus, RideType } from "./ride.interface";
-
 /**
  * Document Interface (instance methods)
  */

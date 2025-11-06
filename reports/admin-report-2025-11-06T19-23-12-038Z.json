@@ -1,0 +1,508 @@
+{
+  "generatedAt": "2025-11-06T19:23:12.038Z",
+  "summary": {
+    "totalUsers": 13,
+    "totalRiders": 9,
+    "totalDrivers": 3,
+    "pendingDriverApprovals": 0,
+    "onlineDrivers": 1,
+    "totalRides": 7,
+    "completedRides": 0,
+    "totalRevenueThisMonth": 0
+  },
+  "recentRides": [
+    {
+      "_id": "690ce91098fb82951174bd8d",
+      "riderId": {
+        "_id": "690cbb91945742d5597a812a",
+        "firstName": "raj",
+        "lastName": "saheb",
+        "email": "raj.rider@gmail.com"
+      },
+      "driverId": null,
+      "driverProfileId": null,
+      "pickupLocation": {
+        "address": "789 Pine Rd, City",
+        "coordinates": {
+          "type": "Point",
+          "coordinates": [
+            -73.9352,
+            40.7306
+          ]
+        }
+      },
+      "destination": {
+        "address": "123 Main St, City",
+        "coordinates": {
+          "type": "Point",
+          "coordinates": [
+            -74.006,
+            40.7128
+          ]
+        }
+      },
+      "status": "accepted",
+      "rideType": "economy",
+      "paymentMethod": "cash",
+      "paymentStatus": "pending",
+      "fare": {
+        "estimated": 176,
+        "actual": null
+      },
+      "distance": {
+        "estimated": 6.29,
+        "actual": null
+      },
+      "duration": {
+        "estimated": 13,
+        "actual": null
+      },
+      "timeline": {
+        "accepted": null,
+        "pickedUp": null,
+        "inTransit": null,
+        "completed": null,
+        "cancelled": null,
+        "requested": "2025-11-06T18:29:36.483Z"
+      },
+      "cancellationReason": null,
+      "cancelledBy": null,
+      "rating": {
+        "riderRating": null,
+        "driverRating": null
+      },
+      "feedback": {
+        "riderComment": null,
+        "driverComment": null
+      },
+      "createdAt": "2025-11-06T18:29:36.505Z",
+      "updatedAt": "2025-11-06T18:30:32.844Z",
+      "__v": 0,
+      "driver": null
+    },
+    {
+      "_id": "690b98eb4ec15785b7c7542f",
+      "riderId": {
+        "_id": "690b7ba43978811c8f42feca",
+        "firstName": "udoy",
+        "lastName": "talukder",
+        "email": "udoy@gmail.com"
+      },
+      "driverId": "6904dc7e8a7f13cccf8cfb1a",
+      "driverProfileId": null,
+      "pickupLocation": {
+        "address": "123 Main St",
+        "coordinates": {
+          "type": "Point",
+          "coordinates": [
+            -74.006,
+            40.7128
+          ]
+        }
+      },
+      "destination": {
+        "address": "456 Oak Ave",
+        "coordinates": {
+          "type": "Point",
+          "coordinates": [
+            -74.012,
+            40.7589
+          ]
+        }
+      },
+      "status": "accepted",
+      "rideType": "economy",
+      "paymentMethod": "cash",
+      "paymentStatus": "pending",
+      "fare": {
+        "estimated": 153,
+        "actual": null
+      },
+      "distance": {
+        "estimated": 5.15,
+        "actual": null
+      },
+      "duration": {
+        "estimated": 10,
+        "actual": null
+      },
+      "timeline": {
+        "accepted": null,
+        "pickedUp": null,
+        "inTransit": null,
+        "completed": null,
+        "cancelled": null,
+        "requested": "2025-11-05T18:35:23.489Z"
+      },
+      "cancellationReason": null,
+      "cancelledBy": null,
+      "rating": {
+        "riderRating": null,
+        "driverRating": null
+      },
+      "feedback": {
+        "riderComment": null,
+        "driverComment": null
+      },
+      "createdAt": "2025-11-05T18:35:23.495Z",
+      "updatedAt": "2025-11-05T18:35:58.439Z",
+      "__v": 0,
+      "driver": {
+        "_id": "6904dc7e8a7f13cccf8cfb1a",
+        "firstName": "salam",
+        "lastName": "Hossain",
+        "email": "salam.driver@gmail.com"
+      }
+    },
+    {
+      "_id": "690b8e33de3678553b9bd4f3",
+      "riderId": {
+        "_id": "690b22603c4265fffe7e79f0",
+        "firstName": "soriful",
+        "lastName": "islam",
+        "email": "soriful@gmail.com"
+      },
+      "driverId": "6904dc7e8a7f13cccf8cfb1a",
+      "driverProfileId": null,
+      "pickupLocation": {
+        "address": "123 Main St",
+        "coordinates": {
+          "type": "Point",
+          "coordinates": [
+            -74.006,
+            40.7128
+          ]
+        }
+      },
+      "destination": {
+        "address": "456 Oak Ave",
+        "coordinates": {
+          "type": "Point",
+          "coordinates": [
+            -74.012,
+            40.7589
+          ]
+        }
+      },
+      "status": "accepted",
+      "rideType": "economy",
+      "paymentMethod": "cash",
+      "paymentStatus": "pending",
+      "fare": {
+        "estimated": 153,
+        "actual": null
+      },
+      "distance": {
+        "estimated": 5.15,
+        "actual": null
+      },
+      "duration": {
+        "estimated": 10,
+        "actual": null
+      },
+      "timeline": {
+        "accepted": null,
+        "pickedUp": null,
+        "inTransit": null,
+        "completed": null,
+        "cancelled": null,
+        "requested": "2025-11-05T17:49:39.962Z"
+      },
+      "cancellationReason": null,
+      "cancelledBy": null,
+      "rating": {
+        "riderRating": null,
+        "driverRating": null
+      },
+      "feedback": {
+        "riderComment": null,
+        "driverComment": null
+      },
+      "createdAt": "2025-11-05T17:49:39.969Z",
+      "updatedAt": "2025-11-06T14:19:38.503Z",
+      "__v": 0,
+      "driver": {
+        "_id": "6904dc7e8a7f13cccf8cfb1a",
+        "firstName": "salam",
+        "lastName": "Hossain",
+        "email": "salam.driver@gmail.com"
+      }
+    },
+    {
+      "_id": "690b81134cbcbc279bfd165e",
+      "riderId": {
+        "_id": "690b7f434cbcbc279bfd1651",
+        "firstName": "asdf",
+        "lastName": "sdf",
+        "email": "as@gmail.com"
+      },
+      "driverId": null,
+      "driverProfileId": null,
+      "pickupLocation": {
+        "address": "123 Main St",
+        "coordinates": {
+          "type": "Point",
+          "coordinates": [
+            -74.006,
+            40.7128
+          ]
+        }
+      },
+      "destination": {
+        "address": "456 Oak Ave",
+        "coordinates": {
+          "type": "Point",
+          "coordinates": [
+            -74.012,
+            40.7589
+          ]
+        }
+      },
+      "status": "accepted",
+      "rideType": "economy",
+      "paymentMethod": "cash",
+      "paymentStatus": "pending",
+      "fare": {
+        "estimated": 153,
+        "actual": null
+      },
+      "distance": {
+        "estimated": 5.15,
+        "actual": null
+      },
+      "duration": {
+        "estimated": 10,
+        "actual": null
+      },
+      "timeline": {
+        "accepted": null,
+        "pickedUp": null,
+        "inTransit": null,
+        "completed": null,
+        "cancelled": null,
+        "requested": "2025-11-05T16:53:39.567Z"
+      },
+      "cancellationReason": null,
+      "cancelledBy": null,
+      "rating": {
+        "riderRating": null,
+        "driverRating": null
+      },
+      "feedback": {
+        "riderComment": null,
+        "driverComment": null
+      },
+      "createdAt": "2025-11-05T16:53:39.573Z",
+      "updatedAt": "2025-11-05T17:22:39.155Z",
+      "__v": 0,
+      "driver": null
+    },
+    {
+      "_id": "6908e2989c617c15613254cc",
+      "riderId": {
+        "_id": "6908e05d8cd414d177e9c294",
+        "firstName": "Mahmud",
+        "lastName": "Khan",
+        "email": "mahmud.rider@gmail.com"
+      },
+      "driverId": null,
+      "driverProfileId": null,
+      "pickupLocation": {
+        "address": "321 Elm St, City",
+        "coordinates": {
+          "type": "Point",
+          "coordinates": [
+            -73.9742,
+            40.7769
+          ]
+        }
+      },
+      "destination": {
+        "address": "789 Pine Rd, City",
+        "coordinates": {
+          "type": "Point",
+          "coordinates": [
+            -73.9352,
+            40.7306
+          ]
+        }
+      },
+      "status": "in_transit",
+      "rideType": "economy",
+      "paymentMethod": "cash",
+      "paymentStatus": "pending",
+      "fare": {
+        "estimated": 172,
+        "actual": null
+      },
+      "distance": {
+        "estimated": 6.11,
+        "actual": null
+      },
+      "duration": {
+        "estimated": 12,
+        "actual": null
+      },
+      "timeline": {
+        "accepted": null,
+        "pickedUp": null,
+        "inTransit": null,
+        "completed": null,
+        "cancelled": null,
+        "requested": "2025-11-03T17:12:56.522Z"
+      },
+      "cancellationReason": null,
+      "cancelledBy": null,
+      "rating": {
+        "riderRating": null,
+        "driverRating": null
+      },
+      "feedback": {
+        "riderComment": null,
+        "driverComment": null
+      },
+      "createdAt": "2025-11-03T17:12:56.532Z",
+      "updatedAt": "2025-11-03T19:44:03.552Z",
+      "__v": 0,
+      "driver": null
+    },
+    {
+      "_id": "6905d778648d5cb12b994ecc",
+      "riderId": {
+        "_id": "6905d73b648d5cb12b994eb9",
+        "firstName": "Hasan",
+        "lastName": "Ali",
+        "email": "hasan.rider@gmail.com"
+      },
+      "driverId": null,
+      "driverProfileId": null,
+      "pickupLocation": {
+        "address": "456 Oak Ave, City",
+        "coordinates": {
+          "type": "Point",
+          "coordinates": [
+            -74.012,
+            40.7589
+          ]
+        }
+      },
+      "destination": {
+        "address": "789 Pine Rd, City",
+        "coordinates": {
+          "type": "Point",
+          "coordinates": [
+            -73.9352,
+            40.7306
+          ]
+        }
+      },
+      "status": "accepted",
+      "rideType": "economy",
+      "paymentMethod": "cash",
+      "paymentStatus": "pending",
+      "fare": {
+        "estimated": 194,
+        "actual": null
+      },
+      "distance": {
+        "estimated": 7.19,
+        "actual": null
+      },
+      "duration": {
+        "estimated": 14,
+        "actual": null
+      },
+      "timeline": {
+        "accepted": null,
+        "pickedUp": null,
+        "inTransit": null,
+        "completed": null,
+        "cancelled": null,
+        "requested": "2025-11-01T09:48:40.795Z"
+      },
+      "cancellationReason": null,
+      "cancelledBy": null,
+      "rating": {
+        "riderRating": null,
+        "driverRating": null
+      },
+      "feedback": {
+        "riderComment": null,
+        "driverComment": null
+      },
+      "createdAt": "2025-11-01T09:48:40.798Z",
+      "updatedAt": "2025-11-03T17:14:21.093Z",
+      "__v": 0,
+      "driver": null
+    },
+    {
+      "_id": "6904d9528a7f13cccf8cfafa",
+      "riderId": {
+        "_id": "690477ed86dd63b6eb00fdd8",
+        "firstName": "jonayet",
+        "lastName": "Khan",
+        "email": "jonayet.rider@gmail.com"
+      },
+      "driverId": "6904781786dd63b6eb00fde0",
+      "driverProfileId": null,
+      "pickupLocation": {
+        "address": "123 Main St",
+        "coordinates": {
+          "type": "Point",
+          "coordinates": [
+            -74.006,
+            40.7128
+          ]
+        }
+      },
+      "destination": {
+        "address": "456 Oak Ave",
+        "coordinates": {
+          "type": "Point",
+          "coordinates": [
+            -74.012,
+            40.7589
+          ]
+        }
+      },
+      "status": "accepted",
+      "rideType": "economy",
+      "paymentMethod": "cash",
+      "paymentStatus": "pending",
+      "fare": {
+        "estimated": 153,
+        "actual": null
+      },
+      "distance": {
+        "estimated": 5.15,
+        "actual": null
+      },
+      "duration": {
+        "estimated": 10,
+        "actual": null
+      },
+      "timeline": {
+        "accepted": null,
+        "pickedUp": null,
+        "inTransit": null,
+        "completed": null,
+        "cancelled": null,
+        "requested": "2025-10-31T15:44:18.288Z"
+      },
+      "cancellationReason": null,
+      "cancelledBy": null,
+      "rating": {
+        "riderRating": null,
+        "driverRating": null
+      },
+      "feedback": {
+        "riderComment": null,
+        "driverComment": null
+      },
+      "createdAt": "2025-10-31T15:44:18.299Z",
+      "updatedAt": "2025-10-31T15:53:29.724Z",
+      "__v": 0,
+      "driver": null
+    }
+  ]
+}
