@@ -57,6 +57,63 @@ interface ProfileResponse {
 /**
  * Register a new user
  */
+// const register = catchAsync(
+//   async (
+//     req: Request<{}, AuthResponse, RegisterRequestBody>,
+//     res: Response<any>
+//   ) => {
+//     const { role, licenseNumber, vehicleInfo, ...userData } = req.body;
+
+//     // Check if user already exists
+//     const existingUser: IUser | null = await User.findOne({
+//       email: userData.email,
+//     });
+//     if (existingUser) {
+//       return ResponseUtils.error(
+//         res,
+//         "User already exists with this email",
+//         409
+//       );
+//     }
+//     // Create a new user
+//     const user = new User({ ...userData, role }) as any;
+//     await user.save();
+
+//     // If driver, create driver profile
+//     if (role === "driver") {
+//       const driver = new Driver({
+//         userId: user._id,
+//         licenseNumber,
+//         vehicleInfo,
+//       }) as any;
+//       await driver.save();
+//     }
+
+//     // Generate tokens
+//     const tokens = authService.generateTokens(user);
+
+//     // Update last login
+//     user.lastLogin = new Date();
+//     await user.save();
+
+//     ResponseUtils.success(
+//       res,
+//       {
+//         user: user.getPublicProfile(),
+//         tokens,
+//       },
+//       "Registration successful",
+//       201
+//     );
+//   }
+// );
+
+// ...existing code...
+import { parseMongoDuplicateError } from "../../utils/db.utils";
+// ...existing code...
+
+// replace the register function with this block
+// ...existing code...
 const register = catchAsync(
   async (
     req: Request<{}, AuthResponse, RegisterRequestBody>,
@@ -69,44 +126,68 @@ const register = catchAsync(
       email: userData.email,
     });
     if (existingUser) {
-      return ResponseUtils.error(
-        res,
-        "User already exists with this email",
-        409
-      );
+      return ResponseUtils.error(res, "User already exists with this email", 409);
     }
-    // Create a new user
-    const user = new User({ ...userData, role }) as any;
-    await user.save();
 
-    // If driver, create driver profile
+    // If driver, pre-check license and plate duplicates to return friendly error before creating user
     if (role === "driver") {
-      const driver = new Driver({
-        userId: user._id,
-        licenseNumber,
-        vehicleInfo,
-      }) as any;
-      await driver.save();
+      if (licenseNumber) {
+        const dupByLicense = await Driver.findOne({ licenseNumber }).lean().catch(() => null);
+        if (dupByLicense) {
+          return ResponseUtils.error(res, "License number already exists", 409);
+        }
+      }
+      const plate = vehicleInfo?.plateNumber;
+      if (plate) {
+        const dupByPlate = await Driver.findOne({ "vehicleInfo.plateNumber": plate }).lean().catch(() => null);
+        if (dupByPlate) {
+          return ResponseUtils.error(res, "Plate number already exists", 409);
+        }
+      }
     }
 
-    // Generate tokens
-    const tokens = authService.generateTokens(user);
+    try {
+      // Create a new user
+      const user = new User({ ...userData, role }) as any;
+      await user.save();
 
-    // Update last login
-    user.lastLogin = new Date();
-    await user.save();
+      // If driver, create driver profile
+      if (role === "driver") {
+        const driver = new Driver({
+          userId: user._id,
+          licenseNumber,
+          vehicleInfo,
+        }) as any;
+        await driver.save();
+      }
 
-    ResponseUtils.success(
-      res,
-      {
-        user: user.getPublicProfile(),
-        tokens,
-      },
-      "Registration successful",
-      201
-    );
+      // Generate tokens
+      const tokens = authService.generateTokens(user);
+
+      // Update last login
+      user.lastLogin = new Date();
+      await user.save();
+
+      ResponseUtils.success(
+        res,
+        {
+          user: user.getPublicProfile(),
+          tokens,
+        },
+        "Registration successful",
+        201
+      );
+    } catch (error: any) {
+      const dupMsg = parseMongoDuplicateError(error);
+      if (dupMsg) {
+        return ResponseUtils.error(res, dupMsg, 409);
+      }
+      console.error("Register error:", error);
+      return ResponseUtils.error(res, error?.message || "Registration failed", 500);
+    }
   }
 );
+// ...existing code...
 
 /**
  * Login user
